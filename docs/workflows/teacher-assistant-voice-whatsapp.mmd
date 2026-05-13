@@ -1,0 +1,54 @@
+%% wtsagnt — Teacher Assistant Voice-WhatsApp Workflow
+%% Source: Senthil (project owner), shared 2026-05-13
+%% This is the FULL real-development target. The 2026-05-13 prototype builds a stripped
+%% subset of this (no STT, no WhatsApp, no Drive, no rework loop, no distribution).
+%% See: docs/superpowers/specs/2026-05-13-wtsagnt-prototype-design.md
+
+flowchart TD
+    A[Teacher sends Voice Note via WhatsApp]
+    B[Speech-to-Text Engine]
+    C[Intent & Requirement Extraction Agent]
+    D[Prompt Engineering Agent]
+    E[Orchestrator Agent]
+    F[Content Generation LLM - PPT]
+    G[Assessment Generator - MCQ]
+    H[Content Generation LLM - Ready Reckoner PDF]
+    I[Format to Microsoft PPT]
+    J[Format to PDF]
+    K[File Packaging Agent]
+    L[Upload to Google Drive]
+    M[Notification Agent]
+    N[Send WhatsApp Message:<br/>Task Completed + Drive Link]
+    O{Teacher Response?}
+    P[Approval Agent]
+    Q[Selective File Distribution Agent]
+    R[Upload to Google Classroom]
+    S[Fetch Student Email IDs]
+    T[Email Notification Agent]
+    U[Send Email with Materials]
+    V[Final WhatsApp Notification:<br/>Task Completed]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    E --> G
+    E --> H
+    F --> I
+    G --> I
+    H --> J
+    I --> K
+    J --> K
+    K --> L
+    L --> M
+    M --> N
+    N --> O
+    O -- "Changes Required" --> C
+    O -- "Approved" --> P
+    P --> Q
+    Q --> R
+    Q --> S
+    S --> T
+    T --> U
+    U --> V

@@ -1,0 +1,41 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+.next/
+dist/
+build/
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# LangFlow local state
+.langflow/
+
+# Prototype runtime outputs
+prototype/outputs/
+prototype/.venv/
+prototype/.pytest_cache/
+
+# uv
+.uv/
+
+# Logs
+*.log
