@@ -9,12 +9,19 @@ AI workflow + WhatsApp approval platform. Teachers send voice notes; the system 
 - **Owner:** Senthil (technical, will review prototypes and architecture decisions)
 - **Developer:** Muthukumar
 
-## Current state (2026-05-13)
+## Current state (2026-05-17)
 
-Greenfield repo. Today's immediate work: build a quality prototype that demonstrates the multi-agent architecture on a LangFlow canvas. After Senthil approves the prototype, real development begins on the full locked stack.
+Greenfield repo, scaffolding underway for the **Monday WhatsApp slice** — a working end-to-end demo: teacher sends WhatsApp text → multi-agent pipeline → `.pptx` + `.pdf` files delivered via signed Supabase Storage links, with a summary-first approval round-trip. Demoable Monday 2026-05-18.
 
-- **Prototype spec:** `docs/superpowers/specs/2026-05-13-wtsagnt-prototype-design.md` — read this before doing any prototype work.
-- **`tasks/plan.md` is OBSOLETE.** It described a Next.js + Python-worker MVP that has been superseded by Senthil's multi-agent voice-WhatsApp workflow diagram and a stack change. Do not implement from it. It will be archived or rewritten after the prototype lands.
+- **Active spec:** `docs/superpowers/specs/2026-05-17-monday-whatsapp-slice-design.md` — Monday demo design, full architecture + CLAUDE.md compliance table.
+- **Active plan:** `docs/superpowers/plans/2026-05-17-monday-whatsapp-slice.md` — 16-task buildout (scaffolding → adapters → pipeline → FastAPI webhook → Railway deploy → Sunday dry-run). Execute via `superpowers:subagent-driven-development` or `superpowers:executing-plans`.
+- **Parked artifacts** (LangFlow-only prototype, *not* on the Monday path; modules reused as parts donor): `docs/superpowers/specs/2026-05-13-wtsagnt-prototype-design.md` + `docs/superpowers/plans/2026-05-13-wtsagnt-prototype.md`. Tasks 2–5 of that plan (schemas, prompts, pptx, pdf) are imported verbatim by the Monday plan.
+- **Workflow diagram (source of truth):** `docs/workflows/teacher-assistant-voice-whatsapp.mmd` (+ `.png`) — Senthil's full real-development target; Monday builds the stripped no-voice no-Drive no-Classroom subset.
+- **`tasks/plan.md` is OBSOLETE.** Pre-pivot MVP plan, do not implement from it.
+
+### Temporary LLM-provider deviation (Monday only)
+
+The Monday demo ships **OpenAI `gpt-4o` + `gpt-4o-mini`** instead of the CLAUDE.md-locked `claude-sonnet-4-6` + `claude-haiku-4-5`. Reason: Anthropic key was not provisioned in time. **Planned revert post-Monday.** The pipeline's two LLM helpers (`call_llm_json`, `call_llm_text`) are the only swap-back touchpoints — ~10 minutes of work. Senthil to confirm at the demo. See spec's "CLAUDE.md compliance check" table.
 
 ## Locked stack (for real development, not prototype)
 
@@ -83,4 +90,20 @@ These were decided in the earlier MVP plan and survive the redirect — they app
 
 ## Build / test / lint commands
 
-Not yet defined. Today's prototype runs LangFlow locally — install LangFlow, open the canvas, run the flow. Real-development commands (TanStack build, Python service runners, N8n compose-up, Supabase migrations) land as those pieces are built. **Update this section as commands are added** so future sessions don't have to discover them.
+No code has landed yet — the commands below are what the prototype plan installs. Update this section once the prototype is built so future sessions don't have to re-discover them.
+
+**Prototype (per `docs/superpowers/plans/2026-05-13-wtsagnt-prototype.md`):** Python 3.11+, `uv` for deps. All commands run from `prototype/`.
+
+- Install deps: `uv sync`
+- Run all tests: `uv run pytest -v`
+- Run a single test: `uv run pytest tests/test_pptx_formatter.py::test_render_pptx_creates_valid_file -v`
+- Anthropic smoke test only: `uv run pytest tests/test_smoke_anthropic.py -v`
+- Start the LangFlow canvas (loads custom components from `langflow_components/`):
+  ```bash
+  LANGFLOW_COMPONENTS_PATH=./langflow_components \
+  ANTHROPIC_API_KEY=$(grep ANTHROPIC_API_KEY .env | cut -d= -f2) \
+  uv run langflow run --host 127.0.0.1 --port 7860
+  ```
+- Outputs land in `prototype/outputs/<UTC-timestamp>/` (gitignored).
+
+Real-development commands (TanStack build, Python service runners, N8n compose-up, Supabase migrations) land as those pieces are built.
