@@ -9,15 +9,30 @@ AI workflow + WhatsApp approval platform. Teachers send voice notes; the system 
 - **Owner:** Senthil (technical, will review prototypes and architecture decisions)
 - **Developer:** Muthukumar
 
-## Current state (2026-05-17)
+## Current state (2026-05-17 evening)
 
-Greenfield repo, scaffolding underway for the **Monday WhatsApp slice** — a working end-to-end demo: teacher sends WhatsApp text → multi-agent pipeline → `.pptx` + `.pdf` files delivered via signed Supabase Storage links, with a summary-first approval round-trip. Demoable Monday 2026-05-18.
+**Monday WhatsApp slice — code complete, pending live wiring.**
 
-- **Active spec:** `docs/superpowers/specs/2026-05-17-monday-whatsapp-slice-design.md` — Monday demo design, full architecture + CLAUDE.md compliance table.
-- **Active plan:** `docs/superpowers/plans/2026-05-17-monday-whatsapp-slice.md` — 16-task buildout (scaffolding → adapters → pipeline → FastAPI webhook → Railway deploy → Sunday dry-run). Execute via `superpowers:subagent-driven-development` or `superpowers:executing-plans`.
+All 16 plan tasks implemented + 2 bonus E2E smoke tests against real OpenAI. 57/58 tests pass (1 expected failure: Supabase smoke fails until the migration is applied). Two real generated lesson decks + reckoners are in `prototype/outputs/` for hand inspection (happy path + revision branch).
+
+- **Active spec:** `docs/superpowers/specs/2026-05-17-monday-whatsapp-slice-design.md`
+- **Active plan:** `docs/superpowers/plans/2026-05-17-monday-whatsapp-slice.md`
+- **Tomorrow checklist:** `prototype/NOTES-2026-05-17.md` — what's verified working + what you still need to do
+- **Setup + run + deploy docs:** `prototype/README.md`
 - **Parked artifacts** (LangFlow-only prototype, *not* on the Monday path; modules reused as parts donor): `docs/superpowers/specs/2026-05-13-wtsagnt-prototype-design.md` + `docs/superpowers/plans/2026-05-13-wtsagnt-prototype.md`. Tasks 2–5 of that plan (schemas, prompts, pptx, pdf) are imported verbatim by the Monday plan.
 - **Workflow diagram (source of truth):** `docs/workflows/teacher-assistant-voice-whatsapp.mmd` (+ `.png`) — Senthil's full real-development target; Monday builds the stripped no-voice no-Drive no-Classroom subset.
 - **`tasks/plan.md` is OBSOLETE.** Pre-pivot MVP plan, do not implement from it.
+
+### What's still pending for Monday (user-only actions)
+
+1. Apply the Supabase migration (paste `prototype/supabase/migrations/0001_monday_demo.sql` into dashboard SQL editor — 5 min)
+2. Rotate the leaked OpenAI key + replace in `prototype/.env`
+3. Join Twilio sandbox from demo phone (text the `join <code>` SMS)
+4. Set `PUBLIC_BASE_URL` in `.env` (ngrok URL locally, Railway domain in prod)
+5. Re-point Twilio's webhook at your server URL
+6. Local demo → Railway deploy → Sunday-evening dry-run + screen recording
+
+Full step-by-step in `prototype/NOTES-2026-05-17.md`.
 
 ### Temporary LLM-provider deviation (Monday only)
 
