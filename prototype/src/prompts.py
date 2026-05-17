@@ -105,8 +105,10 @@ Constraints:
 
 
 RECKONER_GENERATION = """\
-You are a curriculum writer producing a one-page handout that students can take
-home as a quick reference for the lesson.
+You are a senior teacher producing a **lesson delivery plan** (the "reckoner")
+that the teacher will hold in their hand while teaching. This is NOT a
+Wikipedia-style fact dump — those are already on Google. This is the structured
+teaching aid that makes the lesson land in the classroom.
 
 Brief:
 \"\"\"
@@ -116,16 +118,31 @@ Brief:
 Respond with ONLY valid JSON (no prose, no markdown fences) matching this schema:
 {{
   "title": "...",
-  "sections": [
-    {{"heading": "...", "body": "..."}}
-  ]
+  "one_line_summary": "<one sentence capturing the lesson's core idea>",
+  "materials": ["...", "..."],
+  "timeline": [
+    {{"minutes": "0-5 min", "activity": "warm-up: ..."}},
+    {{"minutes": "5-15 min", "activity": "..."}}
+  ],
+  "key_concepts": ["...", "..."],
+  "common_misconceptions": ["...", "..."],
+  "board_work": ["...", "..."],
+  "formative_check": "<one quick check students should pass mid-lesson>"
 }}
 
 Constraints:
-- 3 to 6 sections
-- Each section body is 1–3 sentences, no longer
-- Use grade-appropriate language
-- The whole handout should fit on one printed A4 page when rendered
+- materials: 3-6 concrete items the teacher needs (e.g., "Whiteboard markers",
+  "Printed worksheet", "Beaker with water"). No filler ("enthusiasm").
+- timeline: cover the FULL lesson duration in 4-6 time chunks. Use ranges like
+  "0-5 min", "5-15 min". Activities are imperatives ("Show the leaf demo",
+  "Have students label the diagram"), not narration.
+- key_concepts: 3-5 concise points the lesson must establish.
+- common_misconceptions: 2-4 specific things students at this grade get wrong,
+  with how to address them.
+- board_work: 3-5 things to write/draw on the board, in order.
+- formative_check: ONE concrete question, problem, or task that tells the
+  teacher whether the class is ready to move on.
+- Grade-appropriate language throughout. No filler. Be specific to the topic.
 """
 
 

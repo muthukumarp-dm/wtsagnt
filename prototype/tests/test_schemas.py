@@ -78,9 +78,29 @@ def test_mcq_list_requires_four_options():
         })
 
 
-def test_reckoner_accepts_sections():
+def test_reckoner_accepts_structured_plan():
     r = Reckoner.model_validate({
-        "title": "Photosynthesis quick reference",
-        "sections": [{"heading": "What", "body": "It's a process..."}],
+        "title": "Photosynthesis — grade 7 lesson plan",
+        "one_line_summary": "Plants use sunlight, water, and CO2 to make food.",
+        "materials": ["Whiteboard markers", "Printed worksheet"],
+        "timeline": [
+            {"minutes": "0-5 min", "activity": "Show leaf-in-water demo"},
+            {"minutes": "5-15 min", "activity": "Introduce inputs and outputs"},
+        ],
+        "key_concepts": ["Sunlight is the energy source", "Chlorophyll captures light"],
+        "common_misconceptions": ["Plants 'eat' soil — they don't"],
+        "board_work": ["Draw inputs→leaf→outputs diagram"],
+        "formative_check": "Ask: what two outputs does photosynthesis make?",
     })
-    assert r.sections[0].heading == "What"
+    assert r.timeline[0].minutes == "0-5 min"
+    assert "Whiteboard markers" in r.materials
+
+
+def test_reckoner_requires_structured_fields():
+    """Old shape ({title, sections: [...]}) must be rejected — the renderer
+    now relies on the structured fields."""
+    with pytest.raises(ValidationError):
+        Reckoner.model_validate({
+            "title": "x",
+            "sections": [{"heading": "h", "body": "b"}],
+        })

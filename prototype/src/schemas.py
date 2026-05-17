@@ -52,14 +52,29 @@ class MCQList(BaseModel):
     mcqs: list[MCQ]
 
 
-class ReckonerSection(BaseModel):
-    heading: str
-    body: str
+class TimelineStep(BaseModel):
+    """One row of the lesson timeline. `minutes` is a free-form range
+    like '0-5 min' so the teacher can read it as a clock segment."""
+    minutes: str
+    activity: str
 
 
 class Reckoner(BaseModel):
+    """Structured teaching plan delivered to the teacher as a PDF.
+
+    Replaces the old generic "title + sections" wall with sections explicitly
+    aimed at lesson delivery: a 1-line summary, materials checklist, time-boxed
+    timeline, key concepts, common student misconceptions, board work, and a
+    formative check — content that's actually useful for teaching, not facts
+    that can be Googled."""
     title: str
-    sections: list[ReckonerSection]
+    one_line_summary: str
+    materials: list[str]
+    timeline: list[TimelineStep]
+    key_concepts: list[str]
+    common_misconceptions: list[str]
+    board_work: list[str]
+    formative_check: str
 
 
 class TeachingTip(BaseModel):

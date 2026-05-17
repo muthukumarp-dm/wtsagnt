@@ -49,9 +49,20 @@ def _fake_mcqs_response():
 
 
 def _fake_reckoner_response():
-    return {"title": "Photosynthesis", "sections": [
-        {"heading": "What", "body": "Process plants use to make food."},
-    ]}
+    return {
+        "title": "Photosynthesis — grade 7",
+        "one_line_summary": "Plants use sunlight + water + CO2 to make food.",
+        "materials": ["Whiteboard", "Worksheet"],
+        "timeline": [
+            {"minutes": "0-5 min", "activity": "Warm-up"},
+            {"minutes": "5-25 min", "activity": "Teach inputs/outputs"},
+            {"minutes": "25-30 min", "activity": "Quick check"},
+        ],
+        "key_concepts": ["Sunlight is the energy source"],
+        "common_misconceptions": ["Plants 'eat' soil — they don't"],
+        "board_work": ["Inputs → leaf → outputs diagram"],
+        "formative_check": "What two outputs does photosynthesis make?",
+    }
 
 
 @pytest.fixture
