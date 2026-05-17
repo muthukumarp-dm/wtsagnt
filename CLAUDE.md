@@ -35,13 +35,14 @@ All 16 plan tasks implemented + 3 bonus E2E smoke tests against real cloud servi
 ### What's still pending for Monday (user-only actions)
 
 1. ~~Apply the Supabase migration 0001~~ ✅ done
-2. **Apply migration `0002_worksheet_url.sql`** in the Supabase dashboard SQL editor — adds `worksheet_url TEXT` to `projects` so the student-worksheet PDF link can be stored. Idempotent (`IF NOT EXISTS`).
+2. **Apply migrations `0002_worksheet_url.sql` AND `0003_mcq_url.sql`** in the Supabase dashboard SQL editor before any new deploy. Both add nullable TEXT columns (`worksheet_url`, `mcq_url`) to `projects` for the student-worksheet PDF and MCQ-quiz PDF links. Idempotent (`IF NOT EXISTS`). **Skipping either will make `cas_to_awaiting_approval` fail with "column does not exist" → demo broken.**
 3. Rotate the leaked OpenAI key + update **both** `prototype/.env` AND Railway env var
 4. ~~Join Twilio sandbox from demo phone~~ ✅ done (Muthukumar's phone joined)
 5. ~~Set `PUBLIC_BASE_URL`~~ ✅ done on Railway
 6. Point Twilio sandbox webhook at `https://wtsagnt-monday-production.up.railway.app/webhooks/whatsapp`
 7. ~~Railway deploy~~ ✅ done — service `wtsagnt-monday` live, `/health` 200 OK
 8. Sunday-evening dry-run + 30s screen recording
+9. **Twilio sandbox cap is 50 messages/day** — don't burn it on internal tests before the demo. Resets at midnight UTC. If exhausted, send/receive returns HTTP 429.
 
 Full step-by-step in `prototype/NOTES-2026-05-17.md`.
 

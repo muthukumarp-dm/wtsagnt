@@ -129,6 +129,7 @@ def cas_to_awaiting_approval(
     pptx_url: str,
     pdf_url: str,
     worksheet_url: str | None = None,
+    mcq_url: str | None = None,
 ) -> bool:
     updates: dict[str, Any] = {
         "state": "awaiting_approval",
@@ -138,6 +139,8 @@ def cas_to_awaiting_approval(
     }
     if worksheet_url is not None:
         updates["worksheet_url"] = worksheet_url
+    if mcq_url is not None:
+        updates["mcq_url"] = mcq_url
     return _cas(client, project_id, expected="generating", updates=updates)
 
 

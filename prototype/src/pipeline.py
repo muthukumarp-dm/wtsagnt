@@ -31,6 +31,7 @@ from src.schemas import Intent, SlideDeck, MCQList, Reckoner, TeachingTips, Work
 from src.pptx_formatter import render_pptx
 from src.pdf_formatter import render_pdf
 from src.worksheet_formatter import render_worksheet_pdf
+from src.mcq_formatter import render_mcq_pdf
 
 
 def _cost_cents(model: str, input_tokens: int, output_tokens: int) -> int:
@@ -189,11 +190,12 @@ class Pipeline:
             teaching_tips = TeachingTips.model_validate(tips_raw)
             worksheet = Worksheet.model_validate(worksheet_raw)
 
-            # Steps 6/7/8: render the three files
+            # Steps 6/7/8/9: render the four files
             with tempfile.TemporaryDirectory() as tmp:
                 pptx_path = os.path.join(tmp, "lesson.pptx")
                 pdf_path = os.path.join(tmp, "reckoner.pdf")
                 ws_path = os.path.join(tmp, "worksheet.pdf")
+                mcq_path = os.path.join(tmp, "quiz.pdf")
                 render_pptx(
                     [s.model_dump(exclude_none=True) for s in slide_deck.slides],
                     [m.model_dump(exclude_none=True) for m in mcq_list.mcqs],
@@ -213,6 +215,12 @@ class Pipeline:
                     ws_path,
                     subject=intent.subject,
                 )
+                render_mcq_pdf(
+                    [m.model_dump(exclude_none=True) for m in mcq_list.mcqs],
+                    mcq_path,
+                    title=f"{intent.topic} — Quiz",
+                    subject=intent.subject,
+                )
 
                 with open(pptx_path, "rb") as f:
                     pptx_bytes = f.read()
@@ -220,12 +228,15 @@ class Pipeline:
                     pdf_bytes = f.read()
                 with open(ws_path, "rb") as f:
                     ws_bytes = f.read()
+                with open(mcq_path, "rb") as f:
+                    mcq_bytes = f.read()
 
-            # Step 9: upload + sign — three artifacts in parallel
+            # Step 10: upload + sign — four artifacts in parallel
             bucket = self.settings.supabase_storage_bucket
             pptx_obj = f"{project_id}/lesson.pptx"
             pdf_obj = f"{project_id}/reckoner.pdf"
             ws_obj = f"{project_id}/worksheet.pdf"
+            mcq_obj = f"{project_id}/quiz.pdf"
             await asyncio.gather(
                 self.storage.upload(
                     bucket=bucket, path=pptx_obj, content=pptx_bytes,
@@ -242,8 +253,12 @@ class Pipeline:
                     bucket=bucket, path=ws_obj, content=ws_bytes,
                     content_type="application/pdf",
                 ),
+                self.storage.upload(
+                    bucket=bucket, path=mcq_obj, content=mcq_bytes,
+                    content_type="application/pdf",
+                ),
             )
-            pptx_url, pdf_url, worksheet_url = await asyncio.gather(
+            pptx_url, pdf_url, worksheet_url, mcq_url = await asyncio.gather(
                 self.storage.signed_url(
                     bucket=bucket, path=pptx_obj,
                     expires_in_seconds=self.settings.signed_url_ttl_seconds,
@@ -256,19 +271,23 @@ class Pipeline:
                     bucket=bucket, path=ws_obj,
                     expires_in_seconds=self.settings.signed_url_ttl_seconds,
                 ),
+                self.storage.signed_url(
+                    bucket=bucket, path=mcq_obj,
+                    expires_in_seconds=self.settings.signed_url_ttl_seconds,
+                ),
             )
 
-            # Step 10: CAS → awaiting_approval; send summary
+            # Step 11: CAS → awaiting_approval; send summary
             summary = (
                 f"Made: {intent.duration_min}-min {intent.subject} lesson for grade "
-                f"{intent.grade} on {intent.topic} — {intent.n_slides} slides + "
-                f"{intent.n_mcqs} MCQs + lesson plan + student worksheet.\n\n"
+                f"{intent.grade} on {intent.topic} — slides + lesson plan + "
+                f"student worksheet + {intent.n_mcqs}-question quiz.\n\n"
                 "Reply APPROVE to receive the files, or describe what to change."
             )
             won = state.cas_to_awaiting_approval(
                 self.supabase, project_id,
                 summary=summary, pptx_url=pptx_url, pdf_url=pdf_url,
-                worksheet_url=worksheet_url,
+                worksheet_url=worksheet_url, mcq_url=mcq_url,
             )
             if not won:
                 return
@@ -325,6 +344,7 @@ class Pipeline:
                 ("Slides", project.get("pptx_url")),
                 ("Lesson plan (teacher)", project.get("pdf_url")),
                 ("Student worksheet", project.get("worksheet_url")),
+                ("Quiz (with answer key)", project.get("mcq_url")),
             ]
             for label, url in urls:
                 if not url:

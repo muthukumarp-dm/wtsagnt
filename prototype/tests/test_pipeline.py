@@ -183,13 +183,14 @@ async def test_generate_cas_loss_skips_send(pipeline, fake_project_id):
     pipeline.whatsapp.send_text.assert_not_called()
 
 
-async def test_handle_reply_approved_sends_three_labelled_links(pipeline, fake_project_id):
+async def test_handle_reply_approved_sends_four_labelled_links(pipeline, fake_project_id):
     awaiting_row = {
         "id": fake_project_id, "phone": "whatsapp:+91999...",
         "state": "awaiting_approval",
         "pptx_url": "https://x.test/pptx",
         "pdf_url": "https://x.test/pdf",
         "worksheet_url": "https://x.test/worksheet",
+        "mcq_url": "https://x.test/quiz",
     }
     with patch("src.pipeline.state") as mock_state:
         mock_state.get_project.return_value = awaiting_row
@@ -198,22 +199,25 @@ async def test_handle_reply_approved_sends_three_labelled_links(pipeline, fake_p
 
         await pipeline.handle_reply(fake_project_id, "APPROVE")
 
-    # 3 messages: Slides + Lesson plan + Student worksheet
-    assert pipeline.whatsapp.send_text.await_count == 3
+    # 4 messages: Slides + Lesson plan + Student worksheet + Quiz
+    assert pipeline.whatsapp.send_text.await_count == 4
     sent_bodies = [c.kwargs["body"] for c in pipeline.whatsapp.send_text.call_args_list]
     assert any("Slides:" in b for b in sent_bodies)
     assert any("Lesson plan" in b for b in sent_bodies)
     assert any("Student worksheet" in b for b in sent_bodies)
+    assert any("Quiz" in b for b in sent_bodies)
 
 
-async def test_handle_reply_approved_skips_missing_worksheet_url(pipeline, fake_project_id):
-    """If worksheet_url isn't set (project predates D3), still deliver 2 links."""
+async def test_handle_reply_approved_skips_missing_optional_urls(pipeline, fake_project_id):
+    """If worksheet_url and mcq_url aren't set (project predates D3/D6),
+    still deliver the 2 core links cleanly."""
     awaiting_row = {
         "id": fake_project_id, "phone": "whatsapp:+91999...",
         "state": "awaiting_approval",
         "pptx_url": "https://x.test/pptx",
         "pdf_url": "https://x.test/pdf",
         "worksheet_url": None,
+        "mcq_url": None,
     }
     with patch("src.pipeline.state") as mock_state:
         mock_state.get_project.return_value = awaiting_row
