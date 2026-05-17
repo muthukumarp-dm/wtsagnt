@@ -180,8 +180,13 @@ class Pipeline:
                     [s.model_dump(exclude_none=True) for s in slide_deck.slides],
                     [m.model_dump(exclude_none=True) for m in mcq_list.mcqs],
                     pptx_path,
+                    teacher_name=intent.teacher_name,
                 )
-                render_pdf(reckoner.model_dump(exclude_none=True), pdf_path)
+                render_pdf(
+                    reckoner.model_dump(exclude_none=True),
+                    pdf_path,
+                    teacher_name=intent.teacher_name,
+                )
 
                 with open(pptx_path, "rb") as f:
                     pptx_bytes = f.read()

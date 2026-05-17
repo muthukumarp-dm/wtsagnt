@@ -51,3 +51,34 @@ def test_render_pptx_unknown_layout_falls_back_to_bullets(tmp_path: Path):
     render_pptx(slides, [], str(out))
     prs = Presentation(str(out))
     assert len(prs.slides) == 1
+
+
+def test_render_pptx_brands_title_slide_with_teacher_name(tmp_path: Path):
+    slides = [{"layout": "title", "title": "Photosynthesis", "subtitle": "Grade 7"}]
+    out = tmp_path / "branded.pptx"
+    render_pptx(slides, [], str(out), teacher_name="Ms. Priya")
+    prs = Presentation(str(out))
+    subtitle_text = prs.slides[0].placeholders[1].text
+    assert "Grade 7" in subtitle_text
+    assert "Prepared by Ms. Priya" in subtitle_text
+
+
+def test_render_pptx_brands_only_first_title_slide(tmp_path: Path):
+    """If the deck has two title slides, only the first carries the byline."""
+    slides = [
+        {"layout": "title", "title": "Main", "subtitle": "Grade 7"},
+        {"layout": "title", "title": "Part 2", "subtitle": "Continued"},
+    ]
+    out = tmp_path / "two_title.pptx"
+    render_pptx(slides, [], str(out), teacher_name="Ms. Priya")
+    prs = Presentation(str(out))
+    assert "Prepared by Ms. Priya" in prs.slides[0].placeholders[1].text
+    assert "Prepared by" not in prs.slides[1].placeholders[1].text
+
+
+def test_render_pptx_no_teacher_name_omits_byline(tmp_path: Path):
+    slides = [{"layout": "title", "title": "Photosynthesis", "subtitle": "Grade 7"}]
+    out = tmp_path / "unbranded.pptx"
+    render_pptx(slides, [], str(out))
+    prs = Presentation(str(out))
+    assert "Prepared by" not in prs.slides[0].placeholders[1].text

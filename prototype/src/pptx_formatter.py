@@ -7,13 +7,21 @@ from __future__ import annotations
 from pptx import Presentation
 
 
-def render_pptx(slides: list[dict], mcqs: list[dict], output_path: str) -> None:
+def render_pptx(
+    slides: list[dict],
+    mcqs: list[dict],
+    output_path: str,
+    *,
+    teacher_name: str | None = None,
+) -> None:
     prs = Presentation()
 
+    title_slide_done = False
     for spec in slides:
         layout = spec.get("layout", "bullets")
         if layout == "title":
-            _add_title_slide(prs, spec)
+            _add_title_slide(prs, spec, teacher_name=teacher_name if not title_slide_done else None)
+            title_slide_done = True
         elif layout == "two_column":
             _add_two_column_slide(prs, spec)
         elif layout == "image_text":
@@ -27,11 +35,16 @@ def render_pptx(slides: list[dict], mcqs: list[dict], output_path: str) -> None:
     prs.save(output_path)
 
 
-def _add_title_slide(prs: Presentation, spec: dict) -> None:
+def _add_title_slide(prs: Presentation, spec: dict, *, teacher_name: str | None = None) -> None:
     slide = prs.slides.add_slide(prs.slide_layouts[0])
     slide.shapes.title.text = spec.get("title", "")
-    if len(slide.placeholders) > 1 and spec.get("subtitle"):
-        slide.placeholders[1].text = spec["subtitle"]
+    subtitle_lines: list[str] = []
+    if spec.get("subtitle"):
+        subtitle_lines.append(spec["subtitle"])
+    if teacher_name:
+        subtitle_lines.append(f"Prepared by {teacher_name}")
+    if subtitle_lines and len(slide.placeholders) > 1:
+        slide.placeholders[1].text = "\n".join(subtitle_lines)
 
 
 def _add_bullet_slide(prs: Presentation, spec: dict) -> None:

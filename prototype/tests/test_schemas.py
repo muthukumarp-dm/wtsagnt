@@ -26,6 +26,25 @@ def test_intent_rejects_missing_field():
         Intent.model_validate({"subject": "Science"})
 
 
+def test_intent_accepts_optional_teacher_name():
+    intent = Intent.model_validate({
+        "subject": "Science", "grade": "7", "topic": "Photosynthesis",
+        "duration_min": 30, "n_slides": 10, "n_mcqs": 5,
+        "ppt_prompt": "x", "mcq_prompt": "x", "reckoner_prompt": "x",
+        "teacher_name": "Ms. Priya",
+    })
+    assert intent.teacher_name == "Ms. Priya"
+
+
+def test_intent_teacher_name_defaults_to_none():
+    intent = Intent.model_validate({
+        "subject": "Science", "grade": "7", "topic": "Photosynthesis",
+        "duration_min": 30, "n_slides": 10, "n_mcqs": 5,
+        "ppt_prompt": "x", "mcq_prompt": "x", "reckoner_prompt": "x",
+    })
+    assert intent.teacher_name is None
+
+
 def test_slide_deck_accepts_layouts():
     deck = SlideDeck.model_validate({
         "slides": [

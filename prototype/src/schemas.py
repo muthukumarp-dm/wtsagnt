@@ -14,6 +14,9 @@ class Intent(BaseModel):
     ppt_prompt: str
     mcq_prompt: str
     reckoner_prompt: str
+    # Optional: teacher's display name extracted from the request (e.g.,
+    # "I'm Ms. Priya" → "Ms. Priya"). Renderers add "Prepared by …" when set.
+    teacher_name: str | None = None
 
 
 class Slide(BaseModel):

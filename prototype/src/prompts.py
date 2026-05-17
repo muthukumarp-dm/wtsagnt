@@ -28,12 +28,17 @@ Respond with ONLY valid JSON matching this schema (no prose, no markdown fences)
   "n_mcqs": <int>,
   "ppt_prompt": "<self-contained prompt for the PPT content generator>",
   "mcq_prompt": "<self-contained prompt for the MCQ generator>",
-  "reckoner_prompt": "<self-contained prompt for the reckoner generator>"
+  "reckoner_prompt": "<self-contained prompt for the reckoner generator>",
+  "teacher_name": "<the teacher's display name if they introduced themselves, e.g. 'Ms. Priya Sharma', else null>"
 }}
 
 The three downstream prompts must be self-contained — the downstream agents do
 not see this transcript. Restate the subject, grade, topic, learning objectives,
 and any constraints the teacher mentioned (visual variety, slide count, etc.).
+
+Teacher-name extraction: only set teacher_name if the transcript clearly contains
+a self-introduction such as "I am Ms. X", "from Mr. Y's class", or "for Mrs. Z".
+Use the courtesy title the teacher used. If absent or ambiguous, return null.
 """
 
 
