@@ -189,12 +189,14 @@ class Pipeline:
                     [m.model_dump(exclude_none=True) for m in mcq_list.mcqs],
                     pptx_path,
                     teacher_name=intent.teacher_name,
+                    subject=intent.subject,
                 )
                 render_pdf(
                     reckoner.model_dump(exclude_none=True),
                     pdf_path,
                     teacher_name=intent.teacher_name,
                     teaching_tips=[t.model_dump() for t in teaching_tips.tips],
+                    subject=intent.subject,
                 )
 
                 with open(pptx_path, "rb") as f:

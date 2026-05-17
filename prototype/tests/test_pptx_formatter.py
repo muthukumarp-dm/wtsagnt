@@ -82,3 +82,45 @@ def test_render_pptx_no_teacher_name_omits_byline(tmp_path: Path):
     render_pptx(slides, [], str(out))
     prs = Presentation(str(out))
     assert "Prepared by" not in prs.slides[0].placeholders[1].text
+
+
+def test_render_pptx_applies_subject_color_to_title(tmp_path: Path):
+    """Title text on the title slide should be the palette's primary color."""
+    from src.theme import palette_for_subject
+
+    slides = [{"layout": "title", "title": "Photosynthesis", "subtitle": "Grade 7"}]
+    out = tmp_path / "themed.pptx"
+    render_pptx(slides, [], str(out), subject="Science")
+
+    prs = Presentation(str(out))
+    expected_rgb = palette_for_subject("Science").primary
+    runs = list(prs.slides[0].shapes.title.text_frame.paragraphs[0].runs)
+    assert runs, "title slide title has no runs"
+    color = runs[0].font.color.rgb
+    assert tuple(color) == expected_rgb, (
+        f"title color {tuple(color)} != palette primary {expected_rgb}"
+    )
+
+
+def test_render_pptx_different_subjects_get_different_palettes(tmp_path: Path):
+    """Two decks with the same content but different subjects should produce
+    different title colors. Sanity check that the subject argument is wired."""
+    slides = [{"layout": "title", "title": "Topic", "subtitle": "Grade 7"}]
+
+    sci_path = tmp_path / "science.pptx"
+    math_path = tmp_path / "math.pptx"
+    render_pptx(slides, [], str(sci_path), subject="Science")
+    render_pptx(slides, [], str(math_path), subject="Mathematics")
+
+    sci_runs = list(Presentation(str(sci_path)).slides[0].shapes.title.text_frame.paragraphs[0].runs)
+    math_runs = list(Presentation(str(math_path)).slides[0].shapes.title.text_frame.paragraphs[0].runs)
+    assert tuple(sci_runs[0].font.color.rgb) != tuple(math_runs[0].font.color.rgb)
+
+
+def test_render_pptx_unknown_subject_uses_default_palette(tmp_path: Path):
+    from src.theme import palette_for_subject
+    slides = [{"layout": "title", "title": "Topic", "subtitle": "Grade 7"}]
+    out = tmp_path / "default.pptx"
+    render_pptx(slides, [], str(out), subject="Underwater basket weaving")
+    runs = list(Presentation(str(out)).slides[0].shapes.title.text_frame.paragraphs[0].runs)
+    assert tuple(runs[0].font.color.rgb) == palette_for_subject(None).primary

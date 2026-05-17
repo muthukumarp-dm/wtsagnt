@@ -1,12 +1,31 @@
 """Render reckoner JSON into a .pdf file using reportlab.
 
-The renderer owns all typography and layout. The LLM only supplies headings and body text.
+The renderer owns all typography and layout. The LLM only supplies headings and
+body text. A subject-aware palette colors the title and section headings so the
+PDF reads as intentional, not a default-themed Helvetica wall.
 """
 from __future__ import annotations
+from reportlab.lib.colors import Color
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+
+from src.theme import Palette, palette_for_subject
+
+
+def _rl_color(rgb: tuple[int, int, int]) -> Color:
+    r, g, b = rgb
+    return Color(r / 255, g / 255, b / 255)
+
+
+def _themed_styles(palette: Palette):
+    """Return a styles object with Title/Heading2 recolored from the palette."""
+    styles = getSampleStyleSheet()
+    primary = _rl_color(palette.primary)
+    styles["Title"].textColor = primary
+    styles["Heading2"].textColor = primary
+    return styles
 
 
 def _build_story(
@@ -14,6 +33,7 @@ def _build_story(
     *,
     teacher_name: str | None = None,
     teaching_tips: list[dict] | None = None,
+    subject: str | None = None,
 ) -> list:
     """Build the list of reportlab flowables for the reckoner. Split out so
     tests can introspect the rendered content without reading the compressed
@@ -22,7 +42,8 @@ def _build_story(
     The reckoner sections are student-facing. Teaching tips, if supplied, are
     rendered as a page-break-separated appendix labelled "For the teacher" so
     a teacher can hand the first page to students and keep the second page."""
-    styles = getSampleStyleSheet()
+    palette = palette_for_subject(subject)
+    styles = _themed_styles(palette)
     story: list = []
 
     title = reckoner.get("title")
@@ -55,6 +76,7 @@ def render_pdf(
     *,
     teacher_name: str | None = None,
     teaching_tips: list[dict] | None = None,
+    subject: str | None = None,
 ) -> None:
     doc = SimpleDocTemplate(
         output_path,
@@ -65,5 +87,8 @@ def render_pdf(
         bottomMargin=2 * cm,
     )
     doc.build(_build_story(
-        reckoner, teacher_name=teacher_name, teaching_tips=teaching_tips,
+        reckoner,
+        teacher_name=teacher_name,
+        teaching_tips=teaching_tips,
+        subject=subject,
     ))

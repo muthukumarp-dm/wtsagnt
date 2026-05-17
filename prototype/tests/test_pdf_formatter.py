@@ -119,3 +119,17 @@ def test_render_pdf_with_tips_still_valid(tmp_path: Path):
     render_pdf(reckoner, str(out), teacher_name="Ms. Priya", teaching_tips=tips)
     with open(out, "rb") as f:
         assert f.read(4) == b"%PDF"
+
+
+def test_build_story_subject_palette_colors_title_and_headings():
+    """Title and Heading2 styles should be tinted by the subject palette."""
+    from src.theme import palette_for_subject
+    reckoner = {
+        "title": "Photosynthesis reckoner",
+        "sections": [{"heading": "What", "body": "It's a process."}],
+    }
+    story = _build_story(reckoner, subject="Science")
+    p_title = palette_for_subject("Science").primary
+    title_para = next(f for f in story if isinstance(f, Paragraph) and f.text == "Photosynthesis reckoner")
+    color = title_para.style.textColor
+    assert (round(color.red * 255), round(color.green * 255), round(color.blue * 255)) == p_title
