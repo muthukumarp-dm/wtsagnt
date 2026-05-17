@@ -14,6 +14,7 @@ from reportlab.platypus import (
 )
 from reportlab.lib import colors as rl_colors
 
+from src.fonts import pdf_font_for_language
 from src.theme import Palette, palette_for_subject
 
 
@@ -22,12 +23,17 @@ def _rl_color(rgb: tuple[int, int, int]) -> Color:
     return Color(r / 255, g / 255, b / 255)
 
 
-def _themed_styles(palette: Palette):
-    """Return a styles object with Title/Heading2 recolored from the palette."""
+def _themed_styles(palette: Palette, language: str | None = None):
+    """Return a styles object with Title/Heading2 recolored from the palette
+    and the body font swapped to a Tamil-capable face when language=tamil."""
     styles = getSampleStyleSheet()
     primary = _rl_color(palette.primary)
     styles["Title"].textColor = primary
     styles["Heading2"].textColor = primary
+    font_name = pdf_font_for_language(language)
+    if font_name:
+        for style_name in ("Title", "Heading2", "BodyText", "Italic", "Normal"):
+            styles[style_name].fontName = font_name
     return styles
 
 
@@ -74,6 +80,7 @@ def _build_story(
     teacher_name: str | None = None,
     teaching_tips: list[dict] | None = None,
     subject: str | None = None,
+    language: str | None = None,
 ) -> list:
     """Build the list of reportlab flowables for the reckoner.
 
@@ -83,7 +90,7 @@ def _build_story(
     appendix labelled "For the teacher" so a teacher can hand the first page
     to students and keep the second page."""
     palette = palette_for_subject(subject)
-    styles = _themed_styles(palette)
+    styles = _themed_styles(palette, language=language)
     story: list = []
 
     title = reckoner.get("title")
@@ -153,6 +160,7 @@ def render_pdf(
     teacher_name: str | None = None,
     teaching_tips: list[dict] | None = None,
     subject: str | None = None,
+    language: str | None = None,
 ) -> None:
     doc = SimpleDocTemplate(
         output_path,
@@ -167,4 +175,5 @@ def render_pdf(
         teacher_name=teacher_name,
         teaching_tips=teaching_tips,
         subject=subject,
+        language=language,
     ))

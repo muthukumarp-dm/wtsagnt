@@ -178,6 +178,46 @@ def test_render_pptx_diagram_falls_back_to_bullets_when_nodes_empty(tmp_path: Pa
     assert len(prs.slides) == 1
 
 
+def test_render_pptx_tamil_language_sets_tamil_font_on_runs(tmp_path: Path):
+    """When language=tamil, every text run carries a Tamil-capable font name
+    so PowerPoint substitutes correctly at open time."""
+    slides = [
+        {"layout": "title", "title": "ஒளிச்சேர்க்கை", "subtitle": "Grade 7 — Science"},
+        {"layout": "bullets", "title": "செயல்முறை",
+         "bullets": ["சூரிய ஒளி", "தண்ணீர்", "கார்பன் டை ஆக்சைடு"]},
+    ]
+    out = tmp_path / "tamil.pptx"
+    render_pptx(slides, [], str(out), subject="Science", language="tamil")
+    prs = Presentation(str(out))
+    for slide in prs.slides:
+        for shape in slide.shapes:
+            if not shape.has_text_frame:
+                continue
+            for para in shape.text_frame.paragraphs:
+                for run in para.runs:
+                    if run.text:  # ignore empty runs
+                        assert run.font.name == "Noto Sans Tamil", (
+                            f"run {run.text!r} has font.name={run.font.name!r}"
+                        )
+
+
+def test_render_pptx_english_language_keeps_default_font(tmp_path: Path):
+    """English requests should NOT carry an explicit font name on runs —
+    python-pptx uses the slide-master default (typically Calibri)."""
+    slides = [{"layout": "title", "title": "Photosynthesis", "subtitle": "Grade 7"}]
+    out = tmp_path / "english.pptx"
+    render_pptx(slides, [], str(out), subject="Science", language="english")
+    prs = Presentation(str(out))
+    # At least one run should have font.name == None (master default)
+    runs = []
+    for slide in prs.slides:
+        for shape in slide.shapes:
+            if shape.has_text_frame:
+                for para in shape.text_frame.paragraphs:
+                    runs.extend(para.runs)
+    assert any(r.font.name is None for r in runs)
+
+
 def test_render_pptx_diagram_caps_at_six_nodes(tmp_path: Path):
     """More than 6 nodes are clipped so the diagram stays legible."""
     from pptx.enum.shapes import MSO_SHAPE

@@ -19,6 +19,9 @@ class Intent(BaseModel):
     # Optional: teacher's display name extracted from the request (e.g.,
     # "I'm Ms. Priya" → "Ms. Priya"). Renderers add "Prepared by …" when set.
     teacher_name: str | None = None
+    # Output language. Drives the downstream prompts (generate Tamil content)
+    # and the renderers (swap fonts so Tamil glyphs render, not tofu).
+    language: Literal["english", "tamil"] = "english"
 
 
 class DiagramNode(BaseModel):

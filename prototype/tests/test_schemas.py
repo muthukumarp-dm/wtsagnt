@@ -42,6 +42,21 @@ def test_intent_teacher_name_defaults_to_none():
     assert intent.teacher_name is None
 
 
+def test_intent_language_defaults_to_english():
+    intent = Intent.model_validate(_VALID_INTENT)
+    assert intent.language == "english"
+
+
+def test_intent_accepts_tamil_language():
+    intent = Intent.model_validate({**_VALID_INTENT, "language": "tamil"})
+    assert intent.language == "tamil"
+
+
+def test_intent_rejects_unknown_language():
+    with pytest.raises(ValidationError):
+        Intent.model_validate({**_VALID_INTENT, "language": "klingon"})
+
+
 def test_intent_requires_teaching_tips_prompt():
     payload = {k: v for k, v in _VALID_INTENT.items() if k != "teaching_tips_prompt"}
     with pytest.raises(ValidationError):

@@ -12,6 +12,7 @@ from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Emu, Inches, Pt
 
+from src.fonts import pptx_font_for_language
 from src.theme import Palette, palette_for_subject
 
 
@@ -22,6 +23,7 @@ def render_pptx(
     *,
     teacher_name: str | None = None,
     subject: str | None = None,
+    language: str | None = None,
 ) -> None:
     prs = Presentation()
     palette = palette_for_subject(subject)
@@ -45,6 +47,19 @@ def render_pptx(
 
     for mcq in mcqs:
         _add_mcq_slide(prs, mcq, palette)
+
+    # Apply Tamil font (or others later) to every text run on every slide.
+    # Done as a post-pass so the per-slide helpers don't each need to
+    # remember to set font.name on every run they create.
+    font_name = pptx_font_for_language(language)
+    if font_name:
+        for slide in prs.slides:
+            for shape in slide.shapes:
+                if not shape.has_text_frame:
+                    continue
+                for para in shape.text_frame.paragraphs:
+                    for run in para.runs:
+                        run.font.name = font_name
 
     prs.save(output_path)
 

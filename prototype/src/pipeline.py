@@ -202,6 +202,7 @@ class Pipeline:
                     pptx_path,
                     teacher_name=intent.teacher_name,
                     subject=intent.subject,
+                    language=intent.language,
                 )
                 render_pdf(
                     reckoner.model_dump(exclude_none=True),
@@ -209,17 +210,20 @@ class Pipeline:
                     teacher_name=intent.teacher_name,
                     teaching_tips=[t.model_dump() for t in teaching_tips.tips],
                     subject=intent.subject,
+                    language=intent.language,
                 )
                 render_worksheet_pdf(
                     worksheet.model_dump(exclude_none=True),
                     ws_path,
                     subject=intent.subject,
+                    language=intent.language,
                 )
                 render_mcq_pdf(
                     [m.model_dump(exclude_none=True) for m in mcq_list.mcqs],
                     mcq_path,
                     title=f"{intent.topic} — Quiz",
                     subject=intent.subject,
+                    language=intent.language,
                 )
 
                 with open(pptx_path, "rb") as f:

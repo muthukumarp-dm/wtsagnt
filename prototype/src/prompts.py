@@ -31,7 +31,8 @@ Respond with ONLY valid JSON matching this schema (no prose, no markdown fences)
   "reckoner_prompt": "<self-contained prompt for the reckoner (teaching plan) generator>",
   "teaching_tips_prompt": "<self-contained prompt for the teaching-tips generator>",
   "worksheet_prompt": "<self-contained prompt for the student worksheet generator>",
-  "teacher_name": "<the teacher's display name if they introduced themselves, e.g. 'Ms. Priya Sharma', else null>"
+  "teacher_name": "<the teacher's display name if they introduced themselves, e.g. 'Ms. Priya Sharma', else null>",
+  "language": "english" | "tamil"
 }}
 
 The five downstream prompts must be self-contained — the downstream agents do
@@ -41,6 +42,18 @@ and any constraints the teacher mentioned (visual variety, slide count, etc.).
 Teacher-name extraction: only set teacher_name if the transcript clearly contains
 a self-introduction such as "I am Ms. X", "from Mr. Y's class", or "for Mrs. Z".
 Use the courtesy title the teacher used. If absent or ambiguous, return null.
+
+Language detection: set language="tamil" if the transcript meets ANY of these:
+- contains Tamil script characters (range U+0B80–U+0BFF)
+- explicitly mentions "tamil", "தமிழ்", "Tamil medium", "in Tamil", "தமிழில்"
+- a school-medium context strongly implies Tamil (e.g., "Tamil-medium school")
+Otherwise set language="english".
+
+When language="tamil", restate the downstream prompts in plain English BUT add
+a CLEAR INSTRUCTION inside each of them: "Generate ALL content in Tamil (தமிழ்).
+Keep specialist technical terms in English on first mention with the Tamil
+equivalent in brackets, then use Tamil thereafter." This way each downstream
+agent receives an English prompt that tells it to output Tamil content.
 """
 
 

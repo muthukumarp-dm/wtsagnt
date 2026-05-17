@@ -118,6 +118,40 @@ def test_build_story_subject_palette_colors_title_and_headings():
     assert (round(c.red * 255), round(c.green * 255), round(c.blue * 255)) == expected
 
 
+def test_build_story_tamil_language_swaps_font_in_styles():
+    """When language=tamil, every style's fontName must be the Tamil-
+    registered name so reportlab embeds the right glyph set."""
+    from src.fonts import TAMIL_FONT_NAME
+    story = _build_story(_RECKONER, language="tamil")
+    title = next(f for f in story if isinstance(f, Paragraph) and f.text == _RECKONER["title"])
+    assert title.style.fontName == TAMIL_FONT_NAME
+
+
+def test_render_pdf_with_tamil_content_produces_valid_pdf(tmp_path: Path):
+    """Render real Tamil content end-to-end. The PDF should embed Noto Sans
+    Tamil so the glyphs render — the bytes will contain the registered font
+    name string."""
+    from src.fonts import TAMIL_FONT_NAME
+    tamil_reckoner = {
+        "title": "ஒளிச்சேர்க்கை — பாடத்திட்டம்",
+        "one_line_summary": "தாவரங்கள் சூரிய ஒளி, தண்ணீர், கார்பன் டை ஆக்சைடைப் பயன்படுத்தி உணவு தயாரிக்கின்றன.",
+        "materials": ["வெள்ளைப் பலகை", "அச்சிடப்பட்ட பணித்தாள்"],
+        "timeline": [{"minutes": "0-5 min", "activity": "ஒரு இலையை நீரில் காட்டுங்கள்"}],
+        "key_concepts": ["சூரிய ஒளி ஆற்றலின் மூலம்"],
+        "common_misconceptions": ["தாவரங்கள் மண்ணை சாப்பிடுகின்றன — தவறு"],
+        "board_work": ["உள்ளீடுகள் → இலை → வெளியீடுகள்"],
+        "formative_check": "ஒளிச்சேர்க்கையின் இரண்டு வெளியீடுகள் என்ன?",
+    }
+    out = tmp_path / "tamil.pdf"
+    render_pdf(tamil_reckoner, str(out), language="tamil", subject="Science")
+    raw = out.read_bytes()
+    assert raw[:4] == b"%PDF"
+    # The embedded font reference must appear in the PDF stream
+    assert TAMIL_FONT_NAME.encode() in raw, (
+        f"PDF doesn't reference {TAMIL_FONT_NAME} — Tamil glyphs would render as tofu"
+    )
+
+
 def test_render_pdf_full_render_with_everything(tmp_path: Path):
     tips = [{"heading": "Hook", "body": "Open with a demo."}]
     out = tmp_path / "full.pdf"

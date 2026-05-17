@@ -14,6 +14,7 @@ from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, PageBreak,
 )
 
+from src.fonts import pdf_font_for_language
 from src.theme import Palette, palette_for_subject
 
 
@@ -22,11 +23,15 @@ def _rl_color(rgb: tuple[int, int, int]) -> Color:
     return Color(r / 255, g / 255, b / 255)
 
 
-def _themed_styles(palette: Palette):
+def _themed_styles(palette: Palette, language: str | None = None):
     styles = getSampleStyleSheet()
     primary = _rl_color(palette.primary)
     styles["Title"].textColor = primary
     styles["Heading2"].textColor = primary
+    font_name = pdf_font_for_language(language)
+    if font_name:
+        for style_name in ("Title", "Heading2", "BodyText", "Italic", "Normal"):
+            styles[style_name].fontName = font_name
     return styles
 
 
@@ -35,9 +40,10 @@ def _build_story(
     *,
     title: str = "Quiz",
     subject: str | None = None,
+    language: str | None = None,
 ) -> list:
     palette = palette_for_subject(subject)
-    styles = _themed_styles(palette)
+    styles = _themed_styles(palette, language=language)
     body = styles["BodyText"]
     story: list = [
         Paragraph(title, styles["Title"]),
@@ -81,6 +87,7 @@ def render_mcq_pdf(
     *,
     title: str = "Quiz",
     subject: str | None = None,
+    language: str | None = None,
 ) -> None:
     doc = SimpleDocTemplate(
         output_path,
@@ -90,4 +97,4 @@ def render_mcq_pdf(
         topMargin=2 * cm,
         bottomMargin=2 * cm,
     )
-    doc.build(_build_story(mcqs, title=title, subject=subject))
+    doc.build(_build_story(mcqs, title=title, subject=subject, language=language))
