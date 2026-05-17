@@ -25,6 +25,7 @@ All 16 plan tasks implemented + 3 bonus E2E smoke tests against real cloud servi
 
 - **Active spec:** `docs/superpowers/specs/2026-05-17-monday-whatsapp-slice-design.md`
 - **Active plan:** `docs/superpowers/plans/2026-05-17-monday-whatsapp-slice.md`
+- **Onboarding for new trainees:** `docs/HANDOVER.md` — reading order + Day-1 setup + per-track work assignments (A: TanStack frontend / B: n8n + LangFlow / C: backend integrations + hardening) + decision authority + workflow practices
 - **Tomorrow checklist:** `prototype/NOTES-2026-05-17.md` — what's verified working + what you still need to do
 - **Setup + run + deploy docs:** `prototype/README.md`
 - **Parked artifacts** (LangFlow-only prototype, *not* on the Monday path; modules reused as parts donor): `docs/superpowers/specs/2026-05-13-wtsagnt-prototype-design.md` + `docs/superpowers/plans/2026-05-13-wtsagnt-prototype.md`. Tasks 2–5 of that plan (schemas, prompts, pptx, pdf) are imported verbatim by the Monday plan.
