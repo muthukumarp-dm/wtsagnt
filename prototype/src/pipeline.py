@@ -21,11 +21,12 @@ from src.prompts import (
     PPT_CONTENT_GENERATION,
     MCQ_GENERATION,
     RECKONER_GENERATION,
+    TEACHING_TIPS_GENERATION,
     REVISION_MERGER,
     REPLY_PARSER_HAIKU,
 )
 from src.reply_parser import parse_reply, ReplyOutcome
-from src.schemas import Intent, SlideDeck, MCQList, Reckoner
+from src.schemas import Intent, SlideDeck, MCQList, Reckoner, TeachingTips
 from src.pptx_formatter import render_pptx
 from src.pdf_formatter import render_pdf
 
@@ -153,8 +154,8 @@ class Pipeline:
             )
             intent = Intent.model_validate(intent_raw)
 
-            # Steps 2/3/4: PPT / MCQ / Reckoner in parallel
-            ppt_raw, mcq_raw, reckoner_raw = await asyncio.gather(
+            # Steps 2/3/4/5: PPT / MCQ / Reckoner / TeachingTips in parallel
+            ppt_raw, mcq_raw, reckoner_raw, tips_raw = await asyncio.gather(
                 self.call_llm_json(
                     project_id=project_id, step="ppt_content",
                     prompt=PPT_CONTENT_GENERATION.format(ppt_prompt=intent.ppt_prompt),
@@ -167,10 +168,17 @@ class Pipeline:
                     project_id=project_id, step="reckoner",
                     prompt=RECKONER_GENERATION.format(reckoner_prompt=intent.reckoner_prompt),
                 ),
+                self.call_llm_json(
+                    project_id=project_id, step="teaching_tips",
+                    prompt=TEACHING_TIPS_GENERATION.format(
+                        teaching_tips_prompt=intent.teaching_tips_prompt,
+                    ),
+                ),
             )
             slide_deck = SlideDeck.model_validate(ppt_raw)
             mcq_list = MCQList.model_validate(mcq_raw)
             reckoner = Reckoner.model_validate(reckoner_raw)
+            teaching_tips = TeachingTips.model_validate(tips_raw)
 
             # Steps 5/6: render files
             with tempfile.TemporaryDirectory() as tmp:
@@ -186,6 +194,7 @@ class Pipeline:
                     reckoner.model_dump(exclude_none=True),
                     pdf_path,
                     teacher_name=intent.teacher_name,
+                    teaching_tips=[t.model_dump() for t in teaching_tips.tips],
                 )
 
                 with open(pptx_path, "rb") as f:

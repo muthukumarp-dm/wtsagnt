@@ -2,23 +2,28 @@
 import pytest
 from pydantic import ValidationError
 
-from src.schemas import Intent, SlideDeck, MCQList, Reckoner
+from src.schemas import Intent, SlideDeck, MCQList, Reckoner, TeachingTips
+
+
+_VALID_INTENT = {
+    "subject": "Science",
+    "grade": "7",
+    "topic": "Photosynthesis",
+    "duration_min": 30,
+    "n_slides": 10,
+    "n_mcqs": 5,
+    "ppt_prompt": "Build a grade 7 deck on photosynthesis...",
+    "mcq_prompt": "Write 5 MCQs on photosynthesis for grade 7...",
+    "reckoner_prompt": "Write a one-page reckoner on photosynthesis...",
+    "teaching_tips_prompt": "Write 3-5 teacher coaching tips for this lesson...",
+}
 
 
 def test_intent_accepts_valid_payload():
-    intent = Intent.model_validate({
-        "subject": "Science",
-        "grade": "7",
-        "topic": "Photosynthesis",
-        "duration_min": 30,
-        "n_slides": 10,
-        "n_mcqs": 5,
-        "ppt_prompt": "Build a grade 7 deck on photosynthesis...",
-        "mcq_prompt": "Write 5 MCQs on photosynthesis for grade 7...",
-        "reckoner_prompt": "Write a one-page reckoner on photosynthesis...",
-    })
+    intent = Intent.model_validate(_VALID_INTENT)
     assert intent.n_slides == 10
     assert intent.n_mcqs == 5
+    assert intent.teaching_tips_prompt.startswith("Write")
 
 
 def test_intent_rejects_missing_field():
@@ -27,22 +32,31 @@ def test_intent_rejects_missing_field():
 
 
 def test_intent_accepts_optional_teacher_name():
-    intent = Intent.model_validate({
-        "subject": "Science", "grade": "7", "topic": "Photosynthesis",
-        "duration_min": 30, "n_slides": 10, "n_mcqs": 5,
-        "ppt_prompt": "x", "mcq_prompt": "x", "reckoner_prompt": "x",
-        "teacher_name": "Ms. Priya",
-    })
+    intent = Intent.model_validate({**_VALID_INTENT, "teacher_name": "Ms. Priya"})
     assert intent.teacher_name == "Ms. Priya"
 
 
 def test_intent_teacher_name_defaults_to_none():
-    intent = Intent.model_validate({
-        "subject": "Science", "grade": "7", "topic": "Photosynthesis",
-        "duration_min": 30, "n_slides": 10, "n_mcqs": 5,
-        "ppt_prompt": "x", "mcq_prompt": "x", "reckoner_prompt": "x",
-    })
+    intent = Intent.model_validate(_VALID_INTENT)
     assert intent.teacher_name is None
+
+
+def test_intent_requires_teaching_tips_prompt():
+    payload = {k: v for k, v in _VALID_INTENT.items() if k != "teaching_tips_prompt"}
+    with pytest.raises(ValidationError):
+        Intent.model_validate(payload)
+
+
+def test_teaching_tips_schema_accepts_tips():
+    tips = TeachingTips.model_validate({
+        "tips": [
+            {"heading": "Misconception", "body": "Students often think X..."},
+            {"heading": "Hook", "body": "Open with a leaf-in-water demo..."},
+            {"heading": "Pacing", "body": "Spend 10 min on inputs..."},
+        ],
+    })
+    assert len(tips.tips) == 3
+    assert tips.tips[0].heading == "Misconception"
 
 
 def test_slide_deck_accepts_layouts():

@@ -14,6 +14,7 @@ class Intent(BaseModel):
     ppt_prompt: str
     mcq_prompt: str
     reckoner_prompt: str
+    teaching_tips_prompt: str
     # Optional: teacher's display name extracted from the request (e.g.,
     # "I'm Ms. Priya" → "Ms. Priya"). Renderers add "Prepared by …" when set.
     teacher_name: str | None = None
@@ -59,3 +60,12 @@ class ReckonerSection(BaseModel):
 class Reckoner(BaseModel):
     title: str
     sections: list[ReckonerSection]
+
+
+class TeachingTip(BaseModel):
+    heading: str
+    body: str
+
+
+class TeachingTips(BaseModel):
+    tips: list[TeachingTip]

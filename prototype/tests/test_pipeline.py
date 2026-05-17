@@ -23,7 +23,15 @@ def _fake_intent_response():
         "ppt_prompt": "make a deck",
         "mcq_prompt": "make 5 mcqs",
         "reckoner_prompt": "make a reckoner",
+        "teaching_tips_prompt": "make teacher tips",
     }
+
+
+def _fake_tips_response():
+    return {"tips": [
+        {"heading": "Hook", "body": "Open with a leaf demo."},
+        {"heading": "Misconception", "body": "Students mix photosynthesis with respiration."},
+    ]}
 
 
 def _fake_slides_response():
@@ -75,6 +83,7 @@ async def test_generate_first_run_skips_revision_merger(pipeline, fake_project_i
         _fake_slides_response(),
         _fake_mcqs_response(),
         _fake_reckoner_response(),
+        _fake_tips_response(),
     ])
     pipeline.call_llm_text = AsyncMock()  # should not be called
 
@@ -90,7 +99,7 @@ async def test_generate_first_run_skips_revision_merger(pipeline, fake_project_i
         await pipeline.generate(fake_project_id)
 
     pipeline.call_llm_text.assert_not_called()
-    assert pipeline.call_llm_json.await_count == 4
+    assert pipeline.call_llm_json.await_count == 5
 
 
 async def test_generate_with_revisions_calls_merger_first(pipeline, fake_project_id):
@@ -101,6 +110,7 @@ async def test_generate_with_revisions_calls_merger_first(pipeline, fake_project
         _fake_slides_response(),
         _fake_mcqs_response(),
         _fake_reckoner_response(),
+        _fake_tips_response(),
     ])
 
     project_row = {
@@ -116,7 +126,7 @@ async def test_generate_with_revisions_calls_merger_first(pipeline, fake_project
         await pipeline.generate(fake_project_id)
 
     pipeline.call_llm_text.assert_awaited_once()
-    assert pipeline.call_llm_json.await_count == 4
+    assert pipeline.call_llm_json.await_count == 5
 
 
 async def test_generate_cas_loss_skips_send(pipeline, fake_project_id):
@@ -126,6 +136,7 @@ async def test_generate_cas_loss_skips_send(pipeline, fake_project_id):
         _fake_slides_response(),
         _fake_mcqs_response(),
         _fake_reckoner_response(),
+        _fake_tips_response(),
     ])
 
     project_row = {

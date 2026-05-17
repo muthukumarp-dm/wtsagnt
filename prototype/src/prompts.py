@@ -29,10 +29,11 @@ Respond with ONLY valid JSON matching this schema (no prose, no markdown fences)
   "ppt_prompt": "<self-contained prompt for the PPT content generator>",
   "mcq_prompt": "<self-contained prompt for the MCQ generator>",
   "reckoner_prompt": "<self-contained prompt for the reckoner generator>",
+  "teaching_tips_prompt": "<self-contained prompt for the teaching-tips generator>",
   "teacher_name": "<the teacher's display name if they introduced themselves, e.g. 'Ms. Priya Sharma', else null>"
 }}
 
-The three downstream prompts must be self-contained — the downstream agents do
+The four downstream prompts must be self-contained — the downstream agents do
 not see this transcript. Restate the subject, grade, topic, learning objectives,
 and any constraints the teacher mentioned (visual variety, slide count, etc.).
 
@@ -125,6 +126,36 @@ Constraints:
 - Each section body is 1–3 sentences, no longer
 - Use grade-appropriate language
 - The whole handout should fit on one printed A4 page when rendered
+"""
+
+
+TEACHING_TIPS_GENERATION = """\
+You are a senior teacher coach producing concise pedagogy tips for a colleague
+who is about to deliver the lesson described in the brief.
+
+Brief:
+\"\"\"
+{teaching_tips_prompt}
+\"\"\"
+
+Respond with ONLY valid JSON (no prose, no markdown fences) matching this schema:
+{{
+  "tips": [
+    {{"heading": "...", "body": "..."}}
+  ]
+}}
+
+Constraints:
+- 3 to 5 tips, each tightly focused on ONE of:
+  • common student misconceptions for this topic and how to pre-empt them
+  • a sharp engagement hook (real-world example, demo, question to open with)
+  • timing / pacing advice for the lesson duration
+  • differentiation for fast finishers or struggling students
+  • a formative check students should be able to pass mid-lesson
+- Each body is 1–2 sentences, plain prose, written teacher-to-teacher
+- No filler ("remember to be enthusiastic"), no jargon, no bullet stuffing
+- Grade-appropriate — the tips must reflect what students at this grade
+  realistically struggle with
 """
 
 

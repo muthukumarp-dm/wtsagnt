@@ -76,3 +76,46 @@ def test_render_pdf_with_teacher_name_still_produces_valid_pdf(tmp_path: Path):
     assert out.exists()
     with open(out, "rb") as f:
         assert f.read(4) == b"%PDF"
+
+
+def test_build_story_appends_teaching_tips_after_page_break():
+    from reportlab.platypus import PageBreak
+    reckoner = {
+        "title": "Photosynthesis reckoner",
+        "sections": [{"heading": "What", "body": "It's a process."}],
+    }
+    tips = [
+        {"heading": "Misconception",
+         "body": "Students often confuse photosynthesis with respiration."},
+        {"heading": "Hook", "body": "Open with a leaf-in-water demo."},
+    ]
+    story = _build_story(reckoner, teaching_tips=tips)
+    page_break_idx = next(i for i, f in enumerate(story) if isinstance(f, PageBreak))
+    after = story[page_break_idx:]
+    texts = _story_texts(after)
+    assert "For the teacher" in texts
+    assert "Misconception" in texts
+    assert "Hook" in texts
+
+
+def test_build_story_omits_tips_appendix_when_no_tips():
+    from reportlab.platypus import PageBreak
+    reckoner = {
+        "title": "Photosynthesis reckoner",
+        "sections": [{"heading": "What", "body": "It's a process."}],
+    }
+    story = _build_story(reckoner, teaching_tips=None)
+    assert not any(isinstance(f, PageBreak) for f in story)
+    assert "For the teacher" not in _story_texts(story)
+
+
+def test_render_pdf_with_tips_still_valid(tmp_path: Path):
+    reckoner = {
+        "title": "Photosynthesis reckoner",
+        "sections": [{"heading": "What", "body": "It's a process."}],
+    }
+    tips = [{"heading": "Hook", "body": "Open with a demo."}]
+    out = tmp_path / "with_tips.pdf"
+    render_pdf(reckoner, str(out), teacher_name="Ms. Priya", teaching_tips=tips)
+    with open(out, "rb") as f:
+        assert f.read(4) == b"%PDF"
