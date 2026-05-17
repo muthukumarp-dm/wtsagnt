@@ -8,7 +8,9 @@ artifact reads as intentional rather than default-themed.
 from __future__ import annotations
 from pptx import Presentation
 from pptx.dml.color import RGBColor
-from pptx.util import Emu, Pt
+from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.text import PP_ALIGN
+from pptx.util import Emu, Inches, Pt
 
 from src.theme import Palette, palette_for_subject
 
@@ -35,6 +37,8 @@ def render_pptx(
             title_slide_done = True
         elif layout == "two_column":
             _add_two_column_slide(prs, spec, palette)
+        elif layout == "diagram":
+            _add_diagram_slide(prs, spec, palette)
         else:
             # bullets is the default; unknown layouts also fall through here
             _add_bullet_slide(prs, spec, palette)
@@ -111,6 +115,81 @@ def _add_two_column_slide(prs: Presentation, spec: dict, palette: Palette) -> No
     left.text = spec.get("left_column", "") or ""
     right.text = spec.get("right_column", "") or ""
     _color_title(slide, palette)
+
+
+def _add_diagram_slide(prs: Presentation, spec: dict, palette: Palette) -> None:
+    """Draw a process-flow diagram: rounded boxes connected left-to-right by
+    arrows, all tinted with the subject palette. Falls back to a bullets
+    slide if the diagram payload is empty (LLM hand-waving)."""
+    diagram = spec.get("diagram") or {}
+    nodes = diagram.get("nodes") or []
+    if not nodes:
+        _add_bullet_slide(prs, spec, palette)
+        return
+
+    # Layout 5 = "Title Only" — gives us the title placeholder + a blank canvas
+    slide = prs.slides.add_slide(prs.slide_layouts[5])
+    slide.shapes.title.text = spec.get("title", "")
+    _color_title(slide, palette)
+
+    n = min(len(nodes), 6)  # cap nodes for visual breathing room
+
+    side_margin = Inches(0.5)
+    diagram_top = Inches(2.5)
+    node_height = Inches(1.5)
+    arrow_width = Inches(0.45)
+    arrow_height = Inches(0.4)
+
+    available_width = Inches(10) - 2 * side_margin - (n - 1) * arrow_width
+    node_width = available_width // n
+
+    primary_rgb = RGBColor(*palette.primary)
+    accent_rgb = RGBColor(*palette.accent)
+
+    for i, node in enumerate(nodes[:n]):
+        x = side_margin + i * (node_width + arrow_width)
+        box = slide.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE, x, diagram_top, node_width, node_height,
+        )
+        box.fill.solid()
+        box.fill.fore_color.rgb = accent_rgb
+        box.line.color.rgb = primary_rgb
+        box.line.width = Pt(2)
+
+        tf = box.text_frame
+        tf.word_wrap = True
+        tf.margin_left = Pt(6)
+        tf.margin_right = Pt(6)
+        tf.margin_top = Pt(4)
+        tf.margin_bottom = Pt(4)
+
+        label = (node.get("label") or "").strip() or f"Step {i + 1}"
+        p = tf.paragraphs[0]
+        p.alignment = PP_ALIGN.CENTER
+        run = p.add_run()
+        run.text = label
+        run.font.size = Pt(14)
+        run.font.bold = True
+        run.font.color.rgb = primary_rgb
+
+        detail = (node.get("detail") or "").strip()
+        if detail:
+            dp = tf.add_paragraph()
+            dp.alignment = PP_ALIGN.CENTER
+            dr = dp.add_run()
+            dr.text = detail
+            dr.font.size = Pt(10)
+            dr.font.color.rgb = primary_rgb
+
+        if i < n - 1:
+            arrow_x = x + node_width
+            arrow_y = diagram_top + (node_height - arrow_height) // 2
+            arrow = slide.shapes.add_shape(
+                MSO_SHAPE.RIGHT_ARROW, arrow_x, arrow_y, arrow_width, arrow_height,
+            )
+            arrow.fill.solid()
+            arrow.fill.fore_color.rgb = primary_rgb
+            arrow.line.fill.background()
 
 
 def _add_mcq_slide(prs: Presentation, mcq: dict, palette: Palette) -> None:

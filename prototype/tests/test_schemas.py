@@ -102,9 +102,25 @@ def test_slide_deck_accepts_layouts():
             {"layout": "bullets", "title": "Process", "bullets": ["Sunlight", "Water"]},
             {"layout": "two_column", "title": "In vs Out",
              "left_column": "Inputs: CO2, H2O", "right_column": "Outputs: O2, glucose"},
+            {"layout": "diagram", "title": "How it works",
+             "diagram": {"kind": "process_flow", "nodes": [
+                 {"label": "Sunlight", "detail": "captured by chlorophyll"},
+                 {"label": "Leaf"},
+                 {"label": "Glucose + O2"},
+             ]}},
         ],
     })
-    assert len(deck.slides) == 3
+    assert len(deck.slides) == 4
+    assert deck.slides[3].diagram.kind == "process_flow"
+    assert len(deck.slides[3].diagram.nodes) == 3
+
+
+def test_slide_deck_rejects_image_text_layout():
+    """image_text was dropped in D4 — it should fail validation now."""
+    with pytest.raises(ValidationError):
+        SlideDeck.model_validate({
+            "slides": [{"layout": "image_text", "title": "x", "body": "y"}],
+        })
 
 
 def test_mcq_list_requires_four_options():

@@ -21,17 +21,32 @@ class Intent(BaseModel):
     teacher_name: str | None = None
 
 
+class DiagramNode(BaseModel):
+    """One box in a process-flow diagram."""
+    label: str
+    detail: str | None = None  # small subtext under the label, optional
+
+
+class Diagram(BaseModel):
+    """A programmatic diagram drawn by the renderer (no image needed).
+    `process_flow` lays out boxes left-to-right with arrows between them."""
+    kind: Literal["process_flow"]
+    nodes: list[DiagramNode]
+
+
 class Slide(BaseModel):
     # image_text was removed in D4 — the renderer didn't actually place an
     # image, so those slides came out half-empty. Re-add when Unsplash/DALL-E
-    # image sourcing is wired up.
-    layout: Literal["title", "bullets", "two_column"]
+    # image sourcing is wired up. D5 added `diagram` for vector diagrams the
+    # renderer draws itself — no API or image asset required.
+    layout: Literal["title", "bullets", "two_column", "diagram"]
     title: str
     subtitle: str | None = None
     bullets: list[str] | None = None
     left_column: str | None = None
     right_column: str | None = None
     body: str | None = None
+    diagram: Diagram | None = None
 
 
 class SlideDeck(BaseModel):

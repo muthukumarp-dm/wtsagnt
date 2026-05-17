@@ -59,12 +59,18 @@ Respond with ONLY valid JSON (no prose, no markdown fences) matching this schema
 {{
   "slides": [
     {{
-      "layout": "title" | "bullets" | "two_column",
+      "layout": "title" | "bullets" | "two_column" | "diagram",
       "title": "...",
       "subtitle": "..." | null,
       "bullets": ["...", "..."] | null,
       "left_column": "..." | null,
-      "right_column": "..." | null
+      "right_column": "..." | null,
+      "diagram": {{
+        "kind": "process_flow",
+        "nodes": [
+          {{"label": "...", "detail": "..." | null}}
+        ]
+      }} | null
     }}
   ]
 }}
@@ -72,9 +78,16 @@ Respond with ONLY valid JSON (no prose, no markdown fences) matching this schema
 Slide-level constraints:
 - Start with one "title" slide whose subtitle is a real hook, not "Grade 7
   Science" boilerplate (e.g., "Why do leaves go limp in the dark?")
-- Vary layouts: at least one two_column slide per 5 content slides. Use
-  bullets when items are genuinely list-shaped; use two_column for
-  comparisons, inputs/outputs, before/after, definition/example, etc.
+- Vary layouts: at least one two_column slide per 5 content slides AND at
+  least one "diagram" slide if the lesson involves any process, sequence,
+  cycle, or step-by-step transformation. Diagrams beat bullets for these.
+- Use "diagram" with kind="process_flow" for: a chemical/biological process
+  (photosynthesis, digestion), a historical sequence (causes → war → outcome),
+  a problem-solving procedure (read → plan → solve → check), a transformation
+  pipeline (input → action → output). 3-5 nodes is the sweet spot; the
+  renderer draws boxes + arrows in the subject color so no image is needed.
+  Each node label is 1-3 words; the optional "detail" field is a 3-6 word
+  sub-line (e.g., label="Chlorophyll", detail="captures light energy").
 - No more than 5 bullets per slide, and each bullet must contain a SPECIFIC
   noun, number, or example — not a vague summary. Bad: "Sunlight is
   important." Good: "Sunlight provides ~95% of the energy plants need."

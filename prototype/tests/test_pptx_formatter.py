@@ -125,3 +125,70 @@ def test_render_pptx_unknown_subject_uses_default_palette(tmp_path: Path):
     render_pptx(slides, [], str(out), subject="Underwater basket weaving")
     runs = list(Presentation(str(out)).slides[0].shapes.title.text_frame.paragraphs[0].runs)
     assert tuple(runs[0].font.color.rgb) == palette_for_subject(None).primary
+
+
+def _safe_autoshape_type(shape):
+    """python-pptx raises ValueError if you access auto_shape_type on a
+    non-autoshape (e.g., the title placeholder). Return None in that case."""
+    try:
+        return shape.auto_shape_type
+    except (AttributeError, ValueError):
+        return None
+
+
+def test_render_pptx_diagram_slide_draws_boxes_and_arrows(tmp_path: Path):
+    """Diagram slide: N rounded boxes + (N-1) arrows + a title."""
+    from pptx.enum.shapes import MSO_SHAPE
+    slides = [
+        {"layout": "title", "title": "Photosynthesis", "subtitle": "Grade 7"},
+        {"layout": "diagram", "title": "How it works",
+         "diagram": {"kind": "process_flow", "nodes": [
+             {"label": "Sunlight", "detail": "captured by chlorophyll"},
+             {"label": "Leaf"},
+             {"label": "Glucose"},
+             {"label": "Oxygen"},
+         ]}},
+    ]
+    out = tmp_path / "diagram.pptx"
+    render_pptx(slides, [], str(out), subject="Science")
+    prs = Presentation(str(out))
+    assert len(prs.slides) == 2
+
+    diagram_slide = prs.slides[1]
+    shape_types = [_safe_autoshape_type(s) for s in diagram_slide.shapes]
+    n_boxes = sum(1 for t in shape_types if t == MSO_SHAPE.ROUNDED_RECTANGLE)
+    n_arrows = sum(1 for t in shape_types if t == MSO_SHAPE.RIGHT_ARROW)
+    assert n_boxes == 4, f"expected 4 node boxes, got {n_boxes}"
+    assert n_arrows == 3, f"expected 3 arrows between 4 nodes, got {n_arrows}"
+
+    first_box = next(
+        s for s in diagram_slide.shapes
+        if _safe_autoshape_type(s) == MSO_SHAPE.ROUNDED_RECTANGLE
+    )
+    assert "Sunlight" in first_box.text_frame.text
+
+
+def test_render_pptx_diagram_falls_back_to_bullets_when_nodes_empty(tmp_path: Path):
+    """LLM hand-waving: layout='diagram' but no nodes. Should not crash."""
+    slides = [{"layout": "diagram", "title": "How", "bullets": ["A", "B"],
+               "diagram": {"kind": "process_flow", "nodes": []}}]
+    out = tmp_path / "empty_diagram.pptx"
+    render_pptx(slides, [], str(out))
+    prs = Presentation(str(out))
+    assert len(prs.slides) == 1
+
+
+def test_render_pptx_diagram_caps_at_six_nodes(tmp_path: Path):
+    """More than 6 nodes are clipped so the diagram stays legible."""
+    from pptx.enum.shapes import MSO_SHAPE
+    nodes = [{"label": f"Step {i}"} for i in range(1, 10)]
+    slides = [{"layout": "diagram", "title": "Big diagram",
+               "diagram": {"kind": "process_flow", "nodes": nodes}}]
+    out = tmp_path / "cap.pptx"
+    render_pptx(slides, [], str(out))
+    prs = Presentation(str(out))
+    n_boxes = sum(
+        1 for s in prs.slides[0].shapes
+        if _safe_autoshape_type(s) == MSO_SHAPE.ROUNDED_RECTANGLE
+    )
+    assert n_boxes == 6
