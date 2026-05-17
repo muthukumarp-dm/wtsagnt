@@ -78,6 +78,28 @@ def health() -> dict:
     return {"ok": True}
 
 
+@app.get("/projects")
+def list_projects(phone: str, limit: int = 20, supabase=Depends(get_supabase)) -> dict:
+    """Return the most recent projects for a phone, newest first.
+
+    Query: /projects?phone=whatsapp%3A%2B919999999999&limit=10
+
+    Returns a JSON object: {projects: [{id, state, summary, pptx_url, pdf_url,
+    revision_count, created_at}, ...]}. Sensitive fields like error_reason are
+    included; the public-facing frontend should filter. No auth gating yet —
+    the RLS hardening pass replaces phone-as-query-param with auth.uid()."""
+    if not phone:
+        raise HTTPException(status_code=400, detail="phone query param required")
+    if limit < 1 or limit > 100:
+        raise HTTPException(status_code=400, detail="limit must be 1..100")
+    projects = state.list_projects_for_phone(supabase, phone, limit=limit)
+    public_fields = (
+        "id", "phone", "state", "summary", "pptx_url", "pdf_url",
+        "revision_count", "error_reason", "created_at", "updated_at",
+    )
+    return {"projects": [{k: p.get(k) for k in public_fields} for p in projects]}
+
+
 def _twiml(message: str = "") -> Response:
     body = (
         '<?xml version="1.0" encoding="UTF-8"?>'

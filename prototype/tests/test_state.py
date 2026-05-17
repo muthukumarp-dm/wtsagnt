@@ -6,6 +6,7 @@ import pytest
 from src.state import (
     create_project,
     latest_project_for_phone,
+    list_projects_for_phone,
     insert_inbound_message,
     insert_outbound_message,
     cas_to_generating_for_revision,
@@ -36,6 +37,23 @@ def test_create_project_returns_row(mock_supabase):
     p = create_project(mock_supabase, "whatsapp:+91...", "x")
     assert p["id"] == "p-1"
     assert p["state"] == "generating"
+
+
+def test_list_projects_for_phone_returns_ordered_rows(mock_supabase):
+    rows = [
+        {"id": "p-3", "created_at": "2026-05-17T10:00:00Z", "state": "delivered"},
+        {"id": "p-2", "created_at": "2026-05-17T09:00:00Z", "state": "approved"},
+        {"id": "p-1", "created_at": "2026-05-17T08:00:00Z", "state": "delivered"},
+    ]
+    mock_supabase.table.return_value = _builder_returning(rows)
+    out = list_projects_for_phone(mock_supabase, "whatsapp:+91...", limit=20)
+    assert len(out) == 3
+    assert out[0]["id"] == "p-3"
+
+
+def test_list_projects_for_phone_empty(mock_supabase):
+    mock_supabase.table.return_value = _builder_returning([])
+    assert list_projects_for_phone(mock_supabase, "whatsapp:+91...") == []
 
 
 def test_latest_project_for_phone_returns_none_when_empty(mock_supabase):

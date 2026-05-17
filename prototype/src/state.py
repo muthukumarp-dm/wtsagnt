@@ -45,6 +45,23 @@ def get_project(client, project_id: str) -> Optional[dict]:
     return r.data[0] if r.data else None
 
 
+def list_projects_for_phone(client, phone: str, limit: int = 20) -> list[dict]:
+    """Return the most recent projects for a phone, newest first.
+
+    Used by GET /projects to render a history view. No auth gating yet — the
+    public RLS hardening pass adds that (caller supplies an auth.uid()-scoped
+    query, not a phone param)."""
+    r = (
+        client.table("projects")
+        .select("*")
+        .eq("phone", phone)
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return r.data or []
+
+
 def insert_inbound_message(
     client,
     *,

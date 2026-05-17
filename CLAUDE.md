@@ -36,7 +36,7 @@ All 16 plan tasks implemented + 3 bonus E2E smoke tests against real cloud servi
 
 1. ~~Apply the Supabase migration~~ ✅ done
 2. Rotate the leaked OpenAI key + update **both** `prototype/.env` AND Railway env var
-3. Join Twilio sandbox from demo phone (text the `join <code>` SMS)
+3. ~~Join Twilio sandbox from demo phone~~ ✅ done (Muthukumar's phone joined)
 4. ~~Set `PUBLIC_BASE_URL`~~ ✅ done on Railway
 5. Point Twilio sandbox webhook at `https://wtsagnt-monday-production.up.railway.app/webhooks/whatsapp`
 6. ~~Railway deploy~~ ✅ done — service `wtsagnt-monday` live, `/health` 200 OK

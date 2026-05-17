@@ -64,6 +64,42 @@ def test_health_endpoint(client):
     assert r.json() == {"ok": True}
 
 
+def test_projects_endpoint_returns_history(client):
+    """GET /projects?phone=... returns the projects list."""
+    client.fake_builder.execute.return_value = MagicMock(data=[
+        {"id": "p-1", "phone": "whatsapp:+919999999999",
+         "state": "delivered", "summary": "Made: 30-min Science lesson…",
+         "pptx_url": "https://x.test/a.pptx", "pdf_url": "https://x.test/a.pdf",
+         "revision_count": 0, "error_reason": None,
+         "created_at": "2026-05-17T10:00:00Z", "updated_at": "2026-05-17T10:02:00Z"},
+        {"id": "p-2", "phone": "whatsapp:+919999999999",
+         "state": "awaiting_approval", "summary": "Made: 45-min Math lesson…",
+         "pptx_url": "https://x.test/b.pptx", "pdf_url": "https://x.test/b.pdf",
+         "revision_count": 1, "error_reason": None,
+         "created_at": "2026-05-17T09:00:00Z", "updated_at": "2026-05-17T09:01:30Z"},
+    ])
+    r = client.get("/projects?phone=whatsapp%3A%2B919999999999")
+    assert r.status_code == 200
+    body = r.json()
+    assert "projects" in body
+    assert len(body["projects"]) == 2
+    assert body["projects"][0]["id"] == "p-1"
+    assert body["projects"][0]["state"] == "delivered"
+    assert body["projects"][1]["revision_count"] == 1
+
+
+def test_projects_endpoint_rejects_missing_phone(client):
+    r = client.get("/projects")
+    assert r.status_code == 422  # FastAPI validates required query params
+
+
+def test_projects_endpoint_rejects_bad_limit(client):
+    r = client.get("/projects?phone=x&limit=0")
+    assert r.status_code == 400
+    r2 = client.get("/projects?phone=x&limit=999")
+    assert r2.status_code == 400
+
+
 def test_webhook_bad_signature_returns_401(client):
     client.fake_whatsapp.verify_signature = MagicMock(return_value=False)
     form = {
