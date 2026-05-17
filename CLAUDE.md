@@ -9,11 +9,19 @@ AI workflow + WhatsApp approval platform. Teachers send voice notes; the system 
 - **Owner:** Senthil (technical, will review prototypes and architecture decisions)
 - **Developer:** Muthukumar
 
-## Current state (2026-05-17 evening)
+## Current state (2026-05-17 late evening)
 
-**Monday WhatsApp slice — code complete, pending live wiring.**
+**Monday WhatsApp slice — code complete, deployed to Railway, pending Twilio phone-join only.**
 
-All 16 plan tasks implemented + 2 bonus E2E smoke tests against real OpenAI. 57/58 tests pass (1 expected failure: Supabase smoke fails until the migration is applied). Two real generated lesson decks + reckoners are in `prototype/outputs/` for hand inspection (happy path + revision branch).
+All 16 plan tasks implemented + 3 bonus E2E smoke tests against real cloud services. All 58 tests pass. Three real generated lesson decks + reckoners are in `prototype/outputs/` for hand inspection (happy path local, revision branch local, real-Supabase-Storage roundtrip).
+
+**Deployed service:** `https://wtsagnt-monday-production.up.railway.app`
+- Project: `wtsagnt-monday` (id `2f96e94c-5e3c-49b6-bfde-0322c1d0fde8`) in workspace `muthukumarp-dm's Projects`
+- Service: `wtsagnt-monday` (id `a72d80f5-517b-41a9-b9c1-0456dff2689f`), production env
+- Builder: railpack with `prototype/Procfile`
+- `/health` returns 200 OK; `/webhooks/whatsapp` returns 401 for unsigned requests (signature verification working)
+
+**Supabase project:** `elczksydirrjuqapcpgq` (in user's personal Supabase org, NOT the decisionminds org the MCP is connected to). Tables + `lesson-files` bucket exist; migration `0001_monday_demo.sql` applied via dashboard SQL editor.
 
 - **Active spec:** `docs/superpowers/specs/2026-05-17-monday-whatsapp-slice-design.md`
 - **Active plan:** `docs/superpowers/plans/2026-05-17-monday-whatsapp-slice.md`
@@ -25,12 +33,13 @@ All 16 plan tasks implemented + 2 bonus E2E smoke tests against real OpenAI. 57/
 
 ### What's still pending for Monday (user-only actions)
 
-1. Apply the Supabase migration (paste `prototype/supabase/migrations/0001_monday_demo.sql` into dashboard SQL editor — 5 min)
-2. Rotate the leaked OpenAI key + replace in `prototype/.env`
+1. ~~Apply the Supabase migration~~ ✅ done
+2. Rotate the leaked OpenAI key + update **both** `prototype/.env` AND Railway env var
 3. Join Twilio sandbox from demo phone (text the `join <code>` SMS)
-4. Set `PUBLIC_BASE_URL` in `.env` (ngrok URL locally, Railway domain in prod)
-5. Re-point Twilio's webhook at your server URL
-6. Local demo → Railway deploy → Sunday-evening dry-run + screen recording
+4. ~~Set `PUBLIC_BASE_URL`~~ ✅ done on Railway
+5. Point Twilio sandbox webhook at `https://wtsagnt-monday-production.up.railway.app/webhooks/whatsapp`
+6. ~~Railway deploy~~ ✅ done — service `wtsagnt-monday` live, `/health` 200 OK
+7. Sunday-evening dry-run + 30s screen recording
 
 Full step-by-step in `prototype/NOTES-2026-05-17.md`.
 
