@@ -13,8 +13,9 @@ def test_render_pptx_creates_valid_file(tmp_path: Path):
          "bullets": ["Sunlight", "Water", "CO2"]},
         {"layout": "two_column", "title": "In vs Out",
          "left_column": "Inputs: CO2, H2O", "right_column": "Outputs: O2, glucose"},
-        {"layout": "image_text", "title": "Where",
-         "body": "It happens in the chloroplasts of plant leaves."},
+        {"layout": "bullets", "title": "Where it happens",
+         "bullets": ["Chloroplasts in plant leaves",
+                     "Mostly in palisade and spongy mesophyll cells"]},
     ]
     mcqs = [
         {"question": "What gas do plants take in?",

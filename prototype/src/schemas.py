@@ -22,7 +22,10 @@ class Intent(BaseModel):
 
 
 class Slide(BaseModel):
-    layout: Literal["title", "bullets", "two_column", "image_text"]
+    # image_text was removed in D4 — the renderer didn't actually place an
+    # image, so those slides came out half-empty. Re-add when Unsplash/DALL-E
+    # image sourcing is wired up.
+    layout: Literal["title", "bullets", "two_column"]
     title: str
     subtitle: str | None = None
     bullets: list[str] | None = None

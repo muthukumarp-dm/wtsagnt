@@ -35,9 +35,8 @@ def render_pptx(
             title_slide_done = True
         elif layout == "two_column":
             _add_two_column_slide(prs, spec, palette)
-        elif layout == "image_text":
-            _add_image_text_slide(prs, spec, palette)
         else:
+            # bullets is the default; unknown layouts also fall through here
             _add_bullet_slide(prs, spec, palette)
 
     for mcq in mcqs:
@@ -111,14 +110,6 @@ def _add_two_column_slide(prs: Presentation, spec: dict, palette: Palette) -> No
     right = slide.placeholders[2].text_frame
     left.text = spec.get("left_column", "") or ""
     right.text = spec.get("right_column", "") or ""
-    _color_title(slide, palette)
-
-
-def _add_image_text_slide(prs: Presentation, spec: dict, palette: Palette) -> None:
-    slide = prs.slides.add_slide(prs.slide_layouts[1])
-    slide.shapes.title.text = spec.get("title", "")
-    body = slide.placeholders[1].text_frame
-    body.text = spec.get("body", "") or ""
     _color_title(slide, palette)
 
 

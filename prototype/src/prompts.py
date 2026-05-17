@@ -45,7 +45,10 @@ Use the courtesy title the teacher used. If absent or ambiguous, return null.
 
 
 PPT_CONTENT_GENERATION = """\
-You are an instructional designer building a slide deck for a classroom lesson.
+You are a great teacher designing a slide deck that REPLACES a teacher's
+prep time, not one that needs to be rewritten. Every slide must land a
+specific learning point — no filler, no platitudes, no generic stock phrases
+("today we will learn about X").
 
 Brief:
 \"\"\"
@@ -56,23 +59,35 @@ Respond with ONLY valid JSON (no prose, no markdown fences) matching this schema
 {{
   "slides": [
     {{
-      "layout": "title" | "bullets" | "two_column" | "image_text",
+      "layout": "title" | "bullets" | "two_column",
       "title": "...",
       "subtitle": "..." | null,
       "bullets": ["...", "..."] | null,
       "left_column": "..." | null,
-      "right_column": "..." | null,
-      "body": "..." | null
+      "right_column": "..." | null
     }}
   ]
 }}
 
-Constraints:
-- Start with one "title" slide
-- Vary layouts across the deck — do NOT use only "bullets". Mix bullets, two_column, image_text.
-- No more than 5 bullets per "bullets" slide
-- Use grade-appropriate language
-- Aim for the slide count specified in the brief
+Slide-level constraints:
+- Start with one "title" slide whose subtitle is a real hook, not "Grade 7
+  Science" boilerplate (e.g., "Why do leaves go limp in the dark?")
+- Vary layouts: at least one two_column slide per 5 content slides. Use
+  bullets when items are genuinely list-shaped; use two_column for
+  comparisons, inputs/outputs, before/after, definition/example, etc.
+- No more than 5 bullets per slide, and each bullet must contain a SPECIFIC
+  noun, number, or example — not a vague summary. Bad: "Sunlight is
+  important." Good: "Sunlight provides ~95% of the energy plants need."
+- Where a worked example, analogy, or real-world hook makes the concept
+  click, USE one. Plants ↔ a factory; chlorophyll ↔ a solar panel;
+  photosynthesis ↔ baking a cake with light as the oven. Aim for one
+  analogy slide per deck.
+- Include at least one "common mistake" or "misconception" slide so the
+  student is forewarned about the trap students at this grade fall into.
+- Final content slide should be a "Why this matters" or real-world
+  application — never end with a flat recap.
+- Aim for the slide count specified in the brief.
+- Use grade-appropriate language; assume the student is interested but new.
 """
 
 
@@ -204,16 +219,27 @@ Respond with ONLY valid JSON (no prose, no markdown fences) matching this schema
 }}
 
 Constraints:
-- 5 to 8 activities total
-- Mix kinds: include at least one fill_blank, at least one short-answer
-  question, and at most one match exercise
-- fill_blank prompts MUST contain at least one "___" placeholder
+- 5 to 8 activities total. Order them from easier (recall) to harder
+  (application / explain-your-reasoning).
+- Mix kinds: include at least one fill_blank, at least 2 open-ended
+  "question" activities, and at most one match exercise.
+- fill_blank prompts MUST contain at least one "___" placeholder; the
+  blank should test a specific term the lesson taught, not a guessable
+  filler word.
+- At least 2 of the "question" activities must be APPLICATION questions —
+  not "name X" but "predict what happens if…", "explain why…", "a
+  student says X, what would you tell them?". Recall alone is not enough.
 - match: left_items and right_items must have the same length (4-6 pairs);
-  the answer_hint shows the correct pairing
-- Difficulty matches the grade — fast finishers and strugglers should both
-  be able to attempt every activity
-- No items that could be answered by Googling the topic without attending
-  the lesson — tie wording to the specific concepts the lesson taught
+  the answer_hint shows the correct pairing (e.g., "A=3, B=1, C=2, D=4").
+- Every item must be tied to a SPECIFIC concept the lesson taught — if a
+  student who skipped class could answer it from general knowledge, scrap
+  it and rewrite.
+- Use the topic's specific vocabulary (chlorophyll, stomata, chloroplasts
+  for photosynthesis; not just "leaf parts"). Don't dumb down terminology
+  the lesson actually introduced.
+- Difficulty matches the grade — every activity must be attemptable by
+  even a struggling student in the class, while the application questions
+  should stretch the fast finishers.
 """
 
 
