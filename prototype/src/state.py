@@ -124,14 +124,21 @@ def _cas(client, project_id: str, expected: str, updates: dict[str, Any]) -> boo
 
 
 def cas_to_awaiting_approval(
-    client, project_id: str, *, summary: str, pptx_url: str, pdf_url: str
+    client, project_id: str, *,
+    summary: str,
+    pptx_url: str,
+    pdf_url: str,
+    worksheet_url: str | None = None,
 ) -> bool:
-    return _cas(client, project_id, expected="generating", updates={
+    updates: dict[str, Any] = {
         "state": "awaiting_approval",
         "summary": summary,
         "pptx_url": pptx_url,
         "pdf_url": pdf_url,
-    })
+    }
+    if worksheet_url is not None:
+        updates["worksheet_url"] = worksheet_url
+    return _cas(client, project_id, expected="generating", updates=updates)
 
 
 def cas_to_approved(client, project_id: str) -> bool:

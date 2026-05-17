@@ -28,12 +28,13 @@ Respond with ONLY valid JSON matching this schema (no prose, no markdown fences)
   "n_mcqs": <int>,
   "ppt_prompt": "<self-contained prompt for the PPT content generator>",
   "mcq_prompt": "<self-contained prompt for the MCQ generator>",
-  "reckoner_prompt": "<self-contained prompt for the reckoner generator>",
+  "reckoner_prompt": "<self-contained prompt for the reckoner (teaching plan) generator>",
   "teaching_tips_prompt": "<self-contained prompt for the teaching-tips generator>",
+  "worksheet_prompt": "<self-contained prompt for the student worksheet generator>",
   "teacher_name": "<the teacher's display name if they introduced themselves, e.g. 'Ms. Priya Sharma', else null>"
 }}
 
-The four downstream prompts must be self-contained — the downstream agents do
+The five downstream prompts must be self-contained — the downstream agents do
 not see this transcript. Restate the subject, grade, topic, learning objectives,
 and any constraints the teacher mentioned (visual variety, slide count, etc.).
 
@@ -173,6 +174,46 @@ Constraints:
 - No filler ("remember to be enthusiastic"), no jargon, no bullet stuffing
 - Grade-appropriate — the tips must reflect what students at this grade
   realistically struggle with
+"""
+
+
+WORKSHEET_GENERATION = """\
+You are an assessment designer producing a printable one-page worksheet that
+students will fill out either in class or as homework. The worksheet must be
+tightly tied to the lesson described in the brief — generic Google-able items
+are out of scope; this is the reason teachers use us instead of a search.
+
+Brief:
+\"\"\"
+{worksheet_prompt}
+\"\"\"
+
+Respond with ONLY valid JSON (no prose, no markdown fences) matching this schema:
+{{
+  "title": "<student-facing title>",
+  "instructions": "<one-line instructions students read first>",
+  "activities": [
+    {{
+      "kind": "question" | "fill_blank" | "match",
+      "prompt": "<the question or task shown to the student>",
+      "left_items": ["..."],          // only for kind=match
+      "right_items": ["..."],         // only for kind=match (same length as left)
+      "answer_hint": "<short note for the teacher, e.g. 'A=3,B=1,C=2' or 'expected: photosynthesis'>"
+    }}
+  ]
+}}
+
+Constraints:
+- 5 to 8 activities total
+- Mix kinds: include at least one fill_blank, at least one short-answer
+  question, and at most one match exercise
+- fill_blank prompts MUST contain at least one "___" placeholder
+- match: left_items and right_items must have the same length (4-6 pairs);
+  the answer_hint shows the correct pairing
+- Difficulty matches the grade — fast finishers and strugglers should both
+  be able to attempt every activity
+- No items that could be answered by Googling the topic without attending
+  the lesson — tie wording to the specific concepts the lesson taught
 """
 
 

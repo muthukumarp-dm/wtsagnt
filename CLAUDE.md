@@ -34,13 +34,14 @@ All 16 plan tasks implemented + 3 bonus E2E smoke tests against real cloud servi
 
 ### What's still pending for Monday (user-only actions)
 
-1. ~~Apply the Supabase migration~~ ✅ done
-2. Rotate the leaked OpenAI key + update **both** `prototype/.env` AND Railway env var
-3. ~~Join Twilio sandbox from demo phone~~ ✅ done (Muthukumar's phone joined)
-4. ~~Set `PUBLIC_BASE_URL`~~ ✅ done on Railway
-5. Point Twilio sandbox webhook at `https://wtsagnt-monday-production.up.railway.app/webhooks/whatsapp`
-6. ~~Railway deploy~~ ✅ done — service `wtsagnt-monday` live, `/health` 200 OK
-7. Sunday-evening dry-run + 30s screen recording
+1. ~~Apply the Supabase migration 0001~~ ✅ done
+2. **Apply migration `0002_worksheet_url.sql`** in the Supabase dashboard SQL editor — adds `worksheet_url TEXT` to `projects` so the student-worksheet PDF link can be stored. Idempotent (`IF NOT EXISTS`).
+3. Rotate the leaked OpenAI key + update **both** `prototype/.env` AND Railway env var
+4. ~~Join Twilio sandbox from demo phone~~ ✅ done (Muthukumar's phone joined)
+5. ~~Set `PUBLIC_BASE_URL`~~ ✅ done on Railway
+6. Point Twilio sandbox webhook at `https://wtsagnt-monday-production.up.railway.app/webhooks/whatsapp`
+7. ~~Railway deploy~~ ✅ done — service `wtsagnt-monday` live, `/health` 200 OK
+8. Sunday-evening dry-run + 30s screen recording
 
 Full step-by-step in `prototype/NOTES-2026-05-17.md`.
 

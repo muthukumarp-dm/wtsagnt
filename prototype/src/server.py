@@ -95,7 +95,8 @@ def list_projects(phone: str, limit: int = 20, supabase=Depends(get_supabase)) -
     projects = state.list_projects_for_phone(supabase, phone, limit=limit)
     public_fields = (
         "id", "phone", "state", "summary", "pptx_url", "pdf_url",
-        "revision_count", "error_reason", "created_at", "updated_at",
+        "worksheet_url", "revision_count", "error_reason",
+        "created_at", "updated_at",
     )
     return {"projects": [{k: p.get(k) for k in public_fields} for p in projects]}
 

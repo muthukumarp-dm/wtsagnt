@@ -24,6 +24,7 @@ def _fake_intent_response():
         "mcq_prompt": "make 5 mcqs",
         "reckoner_prompt": "make a reckoner",
         "teaching_tips_prompt": "make teacher tips",
+        "worksheet_prompt": "make a student worksheet",
     }
 
 
@@ -32,6 +33,21 @@ def _fake_tips_response():
         {"heading": "Hook", "body": "Open with a leaf demo."},
         {"heading": "Misconception", "body": "Students mix photosynthesis with respiration."},
     ]}
+
+
+def _fake_worksheet_response():
+    return {
+        "title": "Photosynthesis worksheet",
+        "instructions": "Answer all questions.",
+        "activities": [
+            {"kind": "fill_blank",
+             "prompt": "Plants need ___, ___, and ___ to make food.",
+             "answer_hint": "sunlight, water, CO2"},
+            {"kind": "question",
+             "prompt": "Name one place photosynthesis happens.",
+             "answer_hint": "chloroplasts"},
+        ],
+    }
 
 
 def _fake_slides_response():
@@ -95,6 +111,7 @@ async def test_generate_first_run_skips_revision_merger(pipeline, fake_project_i
         _fake_mcqs_response(),
         _fake_reckoner_response(),
         _fake_tips_response(),
+        _fake_worksheet_response(),
     ])
     pipeline.call_llm_text = AsyncMock()  # should not be called
 
@@ -110,7 +127,7 @@ async def test_generate_first_run_skips_revision_merger(pipeline, fake_project_i
         await pipeline.generate(fake_project_id)
 
     pipeline.call_llm_text.assert_not_called()
-    assert pipeline.call_llm_json.await_count == 5
+    assert pipeline.call_llm_json.await_count == 6
 
 
 async def test_generate_with_revisions_calls_merger_first(pipeline, fake_project_id):
@@ -122,6 +139,7 @@ async def test_generate_with_revisions_calls_merger_first(pipeline, fake_project
         _fake_mcqs_response(),
         _fake_reckoner_response(),
         _fake_tips_response(),
+        _fake_worksheet_response(),
     ])
 
     project_row = {
@@ -137,7 +155,7 @@ async def test_generate_with_revisions_calls_merger_first(pipeline, fake_project
         await pipeline.generate(fake_project_id)
 
     pipeline.call_llm_text.assert_awaited_once()
-    assert pipeline.call_llm_json.await_count == 5
+    assert pipeline.call_llm_json.await_count == 6
 
 
 async def test_generate_cas_loss_skips_send(pipeline, fake_project_id):
@@ -148,6 +166,7 @@ async def test_generate_cas_loss_skips_send(pipeline, fake_project_id):
         _fake_mcqs_response(),
         _fake_reckoner_response(),
         _fake_tips_response(),
+        _fake_worksheet_response(),
     ])
 
     project_row = {
@@ -164,12 +183,37 @@ async def test_generate_cas_loss_skips_send(pipeline, fake_project_id):
     pipeline.whatsapp.send_text.assert_not_called()
 
 
-async def test_handle_reply_approved_sends_two_files(pipeline, fake_project_id):
+async def test_handle_reply_approved_sends_three_labelled_links(pipeline, fake_project_id):
     awaiting_row = {
         "id": fake_project_id, "phone": "whatsapp:+91999...",
         "state": "awaiting_approval",
         "pptx_url": "https://x.test/pptx",
         "pdf_url": "https://x.test/pdf",
+        "worksheet_url": "https://x.test/worksheet",
+    }
+    with patch("src.pipeline.state") as mock_state:
+        mock_state.get_project.return_value = awaiting_row
+        mock_state.cas_to_approved.return_value = True
+        mock_state.cas_to_delivered.return_value = True
+
+        await pipeline.handle_reply(fake_project_id, "APPROVE")
+
+    # 3 messages: Slides + Lesson plan + Student worksheet
+    assert pipeline.whatsapp.send_text.await_count == 3
+    sent_bodies = [c.kwargs["body"] for c in pipeline.whatsapp.send_text.call_args_list]
+    assert any("Slides:" in b for b in sent_bodies)
+    assert any("Lesson plan" in b for b in sent_bodies)
+    assert any("Student worksheet" in b for b in sent_bodies)
+
+
+async def test_handle_reply_approved_skips_missing_worksheet_url(pipeline, fake_project_id):
+    """If worksheet_url isn't set (project predates D3), still deliver 2 links."""
+    awaiting_row = {
+        "id": fake_project_id, "phone": "whatsapp:+91999...",
+        "state": "awaiting_approval",
+        "pptx_url": "https://x.test/pptx",
+        "pdf_url": "https://x.test/pdf",
+        "worksheet_url": None,
     }
     with patch("src.pipeline.state") as mock_state:
         mock_state.get_project.return_value = awaiting_row

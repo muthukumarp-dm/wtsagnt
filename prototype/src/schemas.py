@@ -15,6 +15,7 @@ class Intent(BaseModel):
     mcq_prompt: str
     reckoner_prompt: str
     teaching_tips_prompt: str
+    worksheet_prompt: str
     # Optional: teacher's display name extracted from the request (e.g.,
     # "I'm Ms. Priya" → "Ms. Priya"). Renderers add "Prepared by …" when set.
     teacher_name: str | None = None
@@ -84,3 +85,25 @@ class TeachingTip(BaseModel):
 
 class TeachingTips(BaseModel):
     tips: list[TeachingTip]
+
+
+class WorksheetActivity(BaseModel):
+    """One activity on the printable student worksheet.
+
+    - 'question': open-ended, render with blank lines for the answer
+    - 'fill_blank': prompt contains '___' (or similar) placeholders the
+      student fills in
+    - 'match': pair up left_items with right_items (LLM puts the answers
+      in answer_hint)
+    """
+    kind: Literal["question", "fill_blank", "match"]
+    prompt: str
+    left_items: list[str] | None = None
+    right_items: list[str] | None = None
+    answer_hint: str | None = None
+
+
+class Worksheet(BaseModel):
+    title: str
+    instructions: str
+    activities: list[WorksheetActivity]

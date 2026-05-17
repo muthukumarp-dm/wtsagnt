@@ -22,13 +22,15 @@ from src.prompts import (
     MCQ_GENERATION,
     RECKONER_GENERATION,
     TEACHING_TIPS_GENERATION,
+    WORKSHEET_GENERATION,
     REVISION_MERGER,
     REPLY_PARSER_HAIKU,
 )
 from src.reply_parser import parse_reply, ReplyOutcome
-from src.schemas import Intent, SlideDeck, MCQList, Reckoner, TeachingTips
+from src.schemas import Intent, SlideDeck, MCQList, Reckoner, TeachingTips, Worksheet
 from src.pptx_formatter import render_pptx
 from src.pdf_formatter import render_pdf
+from src.worksheet_formatter import render_worksheet_pdf
 
 
 def _cost_cents(model: str, input_tokens: int, output_tokens: int) -> int:
@@ -154,8 +156,8 @@ class Pipeline:
             )
             intent = Intent.model_validate(intent_raw)
 
-            # Steps 2/3/4/5: PPT / MCQ / Reckoner / TeachingTips in parallel
-            ppt_raw, mcq_raw, reckoner_raw, tips_raw = await asyncio.gather(
+            # Steps 2/3/4/5/6: PPT / MCQ / Reckoner / Tips / Worksheet in parallel
+            ppt_raw, mcq_raw, reckoner_raw, tips_raw, worksheet_raw = await asyncio.gather(
                 self.call_llm_json(
                     project_id=project_id, step="ppt_content",
                     prompt=PPT_CONTENT_GENERATION.format(ppt_prompt=intent.ppt_prompt),
@@ -174,16 +176,24 @@ class Pipeline:
                         teaching_tips_prompt=intent.teaching_tips_prompt,
                     ),
                 ),
+                self.call_llm_json(
+                    project_id=project_id, step="worksheet",
+                    prompt=WORKSHEET_GENERATION.format(
+                        worksheet_prompt=intent.worksheet_prompt,
+                    ),
+                ),
             )
             slide_deck = SlideDeck.model_validate(ppt_raw)
             mcq_list = MCQList.model_validate(mcq_raw)
             reckoner = Reckoner.model_validate(reckoner_raw)
             teaching_tips = TeachingTips.model_validate(tips_raw)
+            worksheet = Worksheet.model_validate(worksheet_raw)
 
-            # Steps 5/6: render files
+            # Steps 6/7/8: render the three files
             with tempfile.TemporaryDirectory() as tmp:
                 pptx_path = os.path.join(tmp, "lesson.pptx")
                 pdf_path = os.path.join(tmp, "reckoner.pdf")
+                ws_path = os.path.join(tmp, "worksheet.pdf")
                 render_pptx(
                     [s.model_dump(exclude_none=True) for s in slide_deck.slides],
                     [m.model_dump(exclude_none=True) for m in mcq_list.mcqs],
@@ -198,16 +208,24 @@ class Pipeline:
                     teaching_tips=[t.model_dump() for t in teaching_tips.tips],
                     subject=intent.subject,
                 )
+                render_worksheet_pdf(
+                    worksheet.model_dump(exclude_none=True),
+                    ws_path,
+                    subject=intent.subject,
+                )
 
                 with open(pptx_path, "rb") as f:
                     pptx_bytes = f.read()
                 with open(pdf_path, "rb") as f:
                     pdf_bytes = f.read()
+                with open(ws_path, "rb") as f:
+                    ws_bytes = f.read()
 
-            # Step 7: upload + sign
+            # Step 9: upload + sign — three artifacts in parallel
             bucket = self.settings.supabase_storage_bucket
             pptx_obj = f"{project_id}/lesson.pptx"
             pdf_obj = f"{project_id}/reckoner.pdf"
+            ws_obj = f"{project_id}/worksheet.pdf"
             await asyncio.gather(
                 self.storage.upload(
                     bucket=bucket, path=pptx_obj, content=pptx_bytes,
@@ -220,8 +238,12 @@ class Pipeline:
                     bucket=bucket, path=pdf_obj, content=pdf_bytes,
                     content_type="application/pdf",
                 ),
+                self.storage.upload(
+                    bucket=bucket, path=ws_obj, content=ws_bytes,
+                    content_type="application/pdf",
+                ),
             )
-            pptx_url, pdf_url = await asyncio.gather(
+            pptx_url, pdf_url, worksheet_url = await asyncio.gather(
                 self.storage.signed_url(
                     bucket=bucket, path=pptx_obj,
                     expires_in_seconds=self.settings.signed_url_ttl_seconds,
@@ -230,18 +252,23 @@ class Pipeline:
                     bucket=bucket, path=pdf_obj,
                     expires_in_seconds=self.settings.signed_url_ttl_seconds,
                 ),
+                self.storage.signed_url(
+                    bucket=bucket, path=ws_obj,
+                    expires_in_seconds=self.settings.signed_url_ttl_seconds,
+                ),
             )
 
-            # Step 8: CAS → awaiting_approval; send summary
+            # Step 10: CAS → awaiting_approval; send summary
             summary = (
                 f"Made: {intent.duration_min}-min {intent.subject} lesson for grade "
                 f"{intent.grade} on {intent.topic} — {intent.n_slides} slides + "
-                f"{intent.n_mcqs} MCQs + 1-page reckoner.\n\n"
+                f"{intent.n_mcqs} MCQs + lesson plan + student worksheet.\n\n"
                 "Reply APPROVE to receive the files, or describe what to change."
             )
             won = state.cas_to_awaiting_approval(
                 self.supabase, project_id,
                 summary=summary, pptx_url=pptx_url, pdf_url=pdf_url,
+                worksheet_url=worksheet_url,
             )
             if not won:
                 return
@@ -294,12 +321,20 @@ class Pipeline:
             if not won:
                 return
             project = state.get_project(self.supabase, project_id)
-            for url in (project["pptx_url"], project["pdf_url"]):
-                result = await self.whatsapp.send_text(to=project["phone"], body=url)
+            urls = [
+                ("Slides", project.get("pptx_url")),
+                ("Lesson plan (teacher)", project.get("pdf_url")),
+                ("Student worksheet", project.get("worksheet_url")),
+            ]
+            for label, url in urls:
+                if not url:
+                    continue
+                body = f"{label}: {url}"
+                result = await self.whatsapp.send_text(to=project["phone"], body=body)
                 state.insert_outbound_message(
                     self.supabase, project_id=project_id, provider_sid=result.sid,
                     from_phone=self.settings.twilio_whatsapp_from,
-                    to_phone=project["phone"], body=url,
+                    to_phone=project["phone"], body=body,
                 )
             state.cas_to_delivered(self.supabase, project_id)
 

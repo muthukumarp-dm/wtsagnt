@@ -2,7 +2,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.schemas import Intent, SlideDeck, MCQList, Reckoner, TeachingTips
+from src.schemas import Intent, SlideDeck, MCQList, Reckoner, TeachingTips, Worksheet
 
 
 _VALID_INTENT = {
@@ -16,6 +16,7 @@ _VALID_INTENT = {
     "mcq_prompt": "Write 5 MCQs on photosynthesis for grade 7...",
     "reckoner_prompt": "Write a one-page reckoner on photosynthesis...",
     "teaching_tips_prompt": "Write 3-5 teacher coaching tips for this lesson...",
+    "worksheet_prompt": "Write a one-page student worksheet for this lesson...",
 }
 
 
@@ -45,6 +46,41 @@ def test_intent_requires_teaching_tips_prompt():
     payload = {k: v for k, v in _VALID_INTENT.items() if k != "teaching_tips_prompt"}
     with pytest.raises(ValidationError):
         Intent.model_validate(payload)
+
+
+def test_intent_requires_worksheet_prompt():
+    payload = {k: v for k, v in _VALID_INTENT.items() if k != "worksheet_prompt"}
+    with pytest.raises(ValidationError):
+        Intent.model_validate(payload)
+
+
+def test_worksheet_schema_accepts_mixed_activities():
+    ws = Worksheet.model_validate({
+        "title": "Photosynthesis worksheet",
+        "instructions": "Answer all questions.",
+        "activities": [
+            {"kind": "fill_blank", "prompt": "Plants need ___ to make food.",
+             "answer_hint": "sunlight"},
+            {"kind": "question", "prompt": "Where does photosynthesis happen?",
+             "answer_hint": "chloroplasts"},
+            {"kind": "match",
+             "prompt": "Match the inputs to where they come from.",
+             "left_items": ["Sunlight", "Water", "CO2"],
+             "right_items": ["The air", "Roots", "The sun"],
+             "answer_hint": "A=3, B=2, C=1"},
+        ],
+    })
+    assert len(ws.activities) == 3
+    assert ws.activities[2].kind == "match"
+    assert ws.activities[2].left_items == ["Sunlight", "Water", "CO2"]
+
+
+def test_worksheet_rejects_bad_kind():
+    with pytest.raises(ValidationError):
+        Worksheet.model_validate({
+            "title": "x", "instructions": "y",
+            "activities": [{"kind": "essay", "prompt": "Write something"}],
+        })
 
 
 def test_teaching_tips_schema_accepts_tips():
