@@ -40,9 +40,18 @@ def _supabase_client():
 
 @lru_cache(maxsize=1)
 def _llm_client() -> AsyncOpenAI:
-    """LLM client — OpenAI for Monday, AsyncAnthropic on planned revert."""
+    """LLM client — OpenAI for Monday, AsyncAnthropic on planned revert.
+
+    Long timeout + retries because we fan out 5 generators in parallel under
+    load — a single slow connection (network blip, OpenAI 5xx, etc.) was
+    killing whole runs with "read operation timed out" using httpx defaults.
+    """
     s = get_settings()
-    return AsyncOpenAI(api_key=s.openai_api_key)
+    return AsyncOpenAI(
+        api_key=s.openai_api_key,
+        timeout=120.0,
+        max_retries=3,
+    )
 
 
 @lru_cache(maxsize=1)
