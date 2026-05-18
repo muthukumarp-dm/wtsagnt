@@ -9,7 +9,7 @@ from __future__ import annotations
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
-from pptx.enum.text import PP_ALIGN
+from pptx.enum.text import MSO_AUTO_SIZE, PP_ALIGN
 from pptx.util import Emu, Inches, Pt
 
 from src.fonts import pptx_font_for_language
@@ -48,20 +48,49 @@ def render_pptx(
     for mcq in mcqs:
         _add_mcq_slide(prs, mcq, palette)
 
-    # Apply Tamil font (or others later) to every text run on every slide.
-    # Done as a post-pass so the per-slide helpers don't each need to
-    # remember to set font.name on every run they create.
-    font_name = pptx_font_for_language(language)
-    if font_name:
-        for slide in prs.slides:
-            for shape in slide.shapes:
-                if not shape.has_text_frame:
-                    continue
-                for para in shape.text_frame.paragraphs:
-                    for run in para.runs:
-                        run.font.name = font_name
+    # Post-pass: apply text-frame polish (word-wrap + auto-shrink) on every
+    # slide so long titles/bullets don't overflow. For Tamil we also tag every
+    # run with the Tamil font name and scale fonts down — Tamil glyphs render
+    # taller than Latin, so default sizes overflow without this.
+    _polish_text_frames(prs, language)
 
     prs.save(output_path)
+
+
+def _polish_text_frames(prs: Presentation, language: str | None) -> None:
+    """Word-wrap + auto-shrink every text frame; size + font-tag for Tamil.
+
+    Auto-fit is what kills overlap: PowerPoint will shrink text to fit the
+    placeholder when the file opens. Word-wrap stops single long lines from
+    spilling outside the shape. Tamil needs smaller starting sizes because
+    its glyphs are visually larger than Latin at the same point size.
+    """
+    font_name = pptx_font_for_language(language)
+    is_tamil = font_name is not None
+
+    for slide in prs.slides:
+        title_shape = slide.shapes.title
+        for shape in slide.shapes:
+            if not shape.has_text_frame:
+                continue
+            tf = shape.text_frame
+            tf.word_wrap = True
+            try:
+                tf.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+            except (AttributeError, ValueError):
+                pass  # some shape types (e.g., autoshapes) don't support autosize
+
+            is_title = shape is title_shape
+            for para in tf.paragraphs:
+                for run in para.runs:
+                    if is_tamil:
+                        run.font.name = font_name
+                        if run.font.size is None:
+                            run.font.size = Pt(28) if is_title else Pt(20)
+                        else:
+                            # Shrink explicit sizes for Tamil headroom
+                            current_pt = run.font.size.pt
+                            run.font.size = Pt(max(10, int(current_pt * 0.85)))
 
 
 def _rgb(palette_color: tuple[int, int, int]) -> RGBColor:
