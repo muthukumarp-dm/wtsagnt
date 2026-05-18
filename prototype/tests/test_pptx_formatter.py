@@ -236,6 +236,48 @@ def test_render_pptx_tamil_sets_complex_script_typeface(tmp_path: Path):
     assert runs_checked > 0, "no runs were checked — test is a no-op"
 
 
+def test_render_pptx_tamil_embeds_font_inside_pptx(tmp_path: Path):
+    """The bulletproof fix: the Tamil TTF is embedded inside the PPTX so it
+    renders on any machine without Noto Sans Tamil installed locally.
+    Verifies: (a) ppt/fonts/font1.fntdata is present, (b) [Content_Types]
+    declares fntdata, (c) presentation.xml has <p:embeddedFontLst>."""
+    import zipfile
+    slides = [{"layout": "title", "title": "ஒளிச்சேர்க்கை", "subtitle": "Grade 7"}]
+    out = tmp_path / "embedded.pptx"
+    render_pptx(slides, [], str(out), subject="Science", language="tamil")
+    with zipfile.ZipFile(out) as zf:
+        names = zf.namelist()
+        assert "ppt/fonts/font1.fntdata" in names, (
+            "Tamil font binary missing from PPTX — embedding failed"
+        )
+        ct = zf.read("[Content_Types].xml").decode()
+        assert "fntdata" in ct, (
+            "[Content_Types].xml is missing the fntdata Default — "
+            "PowerPoint will reject the embedded font"
+        )
+        pres = zf.read("ppt/presentation.xml").decode()
+        assert "embeddedFontLst" in pres, (
+            "<p:embeddedFontLst> missing from presentation.xml"
+        )
+        assert "Noto Sans Tamil" in pres, (
+            "typeface name not declared in embeddedFontLst"
+        )
+
+
+def test_render_pptx_english_does_not_embed_fonts(tmp_path: Path):
+    """English decks should not pay the embedding cost — fonts only embed
+    for Tamil."""
+    import zipfile
+    slides = [{"layout": "title", "title": "Photosynthesis", "subtitle": "Grade 7"}]
+    out = tmp_path / "no_embed.pptx"
+    render_pptx(slides, [], str(out), subject="Science", language="english")
+    with zipfile.ZipFile(out) as zf:
+        names = zf.namelist()
+        assert "ppt/fonts/font1.fntdata" not in names, (
+            "English deck shouldn't carry the Tamil font binary"
+        )
+
+
 def test_render_pptx_english_language_keeps_default_font(tmp_path: Path):
     """English requests should NOT carry an explicit font name on runs —
     python-pptx uses the slide-master default (typically Calibri)."""

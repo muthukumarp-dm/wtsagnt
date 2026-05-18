@@ -14,7 +14,12 @@ from pptx.oxml.ns import qn
 from pptx.util import Emu, Inches, Pt
 from lxml import etree
 
-from src.fonts import pptx_font_for_language
+from src.fonts import (
+    TAMIL_REGULAR_TTF,
+    TAMIL_BOLD_TTF,
+    pptx_font_for_language,
+)
+from src.font_embed import embed_fonts_in_pptx
 from src.theme import Palette, palette_for_subject
 
 
@@ -57,6 +62,21 @@ def render_pptx(
     _polish_text_frames(prs, language)
 
     prs.save(output_path)
+
+    # For Tamil decks, embed the Noto Sans Tamil TTF inside the PPTX so the
+    # file renders correctly on any machine without anyone installing fonts.
+    # Setting <a:cs> typeface (in _polish_text_frames) is necessary but not
+    # sufficient — without an embedded font, PowerPoint falls back to system
+    # substitution and Tamil glyphs render as tofu on machines lacking the
+    # font.
+    if (language or "").lower() == "tamil" and TAMIL_REGULAR_TTF.exists():
+        bold = TAMIL_BOLD_TTF if TAMIL_BOLD_TTF.exists() else None
+        embed_fonts_in_pptx(
+            output_path,
+            typeface="Noto Sans Tamil",
+            regular_ttf=TAMIL_REGULAR_TTF,
+            bold_ttf=bold,
+        )
 
 
 def _set_run_typeface(run, font_name: str) -> None:
