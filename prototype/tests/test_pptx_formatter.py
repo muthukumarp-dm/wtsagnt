@@ -201,6 +201,41 @@ def test_render_pptx_tamil_language_sets_tamil_font_on_runs(tmp_path: Path):
                         )
 
 
+def test_render_pptx_tamil_sets_complex_script_typeface(tmp_path: Path):
+    """The real fix: <a:cs typeface='Noto Sans Tamil'/> must be on every run,
+    not just <a:latin>. Without <a:cs>, PowerPoint dispatches Tamil glyphs to
+    the theme's default complex-script font (usually a Latin font) and they
+    render as tofu boxes."""
+    from pptx.oxml.ns import qn
+    slides = [
+        {"layout": "title", "title": "ஒளிச்சேர்க்கை", "subtitle": "Grade 7"},
+        {"layout": "bullets", "title": "செயல்முறை",
+         "bullets": ["சூரிய ஒளி", "தண்ணீர்"]},
+    ]
+    out = tmp_path / "tamil_cs.pptx"
+    render_pptx(slides, [], str(out), subject="Science", language="tamil")
+    prs = Presentation(str(out))
+    runs_checked = 0
+    for slide in prs.slides:
+        for shape in slide.shapes:
+            if not shape.has_text_frame:
+                continue
+            for para in shape.text_frame.paragraphs:
+                for run in para.runs:
+                    if not run.text:
+                        continue
+                    rPr = run._r.find(qn("a:rPr"))
+                    assert rPr is not None, f"run {run.text!r} has no rPr"
+                    cs = rPr.find(qn("a:cs"))
+                    assert cs is not None, (
+                        f"run {run.text!r} has no <a:cs> — Tamil glyphs "
+                        f"will render with the wrong font"
+                    )
+                    assert cs.get("typeface") == "Noto Sans Tamil"
+                    runs_checked += 1
+    assert runs_checked > 0, "no runs were checked — test is a no-op"
+
+
 def test_render_pptx_english_language_keeps_default_font(tmp_path: Path):
     """English requests should NOT carry an explicit font name on runs —
     python-pptx uses the slide-master default (typically Calibri)."""

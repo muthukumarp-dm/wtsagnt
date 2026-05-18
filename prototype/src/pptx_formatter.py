@@ -10,7 +10,9 @@ from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import MSO_AUTO_SIZE, PP_ALIGN
+from pptx.oxml.ns import qn
 from pptx.util import Emu, Inches, Pt
+from lxml import etree
 
 from src.fonts import pptx_font_for_language
 from src.theme import Palette, palette_for_subject
@@ -57,6 +59,27 @@ def render_pptx(
     prs.save(output_path)
 
 
+def _set_run_typeface(run, font_name: str) -> None:
+    """Force the typeface on a run for BOTH the Latin font slot AND the
+    complex-script font slot.
+
+    python-pptx's `run.font.name` setter only writes <a:latin>, which controls
+    Latin glyphs. Tamil/Hindi/Arabic glyphs are dispatched through OOXML's
+    "complex script" slot (<a:cs>), which python-pptx exposes no setter for.
+    Without setting <a:cs>, PowerPoint substitutes the theme's default complex
+    script font (often a Latin-only font), so Tamil glyphs either render as
+    tofu boxes or in whatever fallback the OS picks. Setting both slots makes
+    PowerPoint use Noto Sans Tamil for Tamil characters explicitly.
+    """
+    rPr = run._r.get_or_add_rPr()
+    for tag in ("a:latin", "a:cs", "a:ea"):
+        for existing in rPr.findall(qn(tag)):
+            rPr.remove(existing)
+    for tag in ("a:latin", "a:cs", "a:ea"):
+        node = etree.SubElement(rPr, qn(tag))
+        node.set("typeface", font_name)
+
+
 def _polish_text_frames(prs: Presentation, language: str | None) -> None:
     """Word-wrap + auto-shrink every text frame; size + font-tag for Tamil.
 
@@ -64,6 +87,9 @@ def _polish_text_frames(prs: Presentation, language: str | None) -> None:
     placeholder when the file opens. Word-wrap stops single long lines from
     spilling outside the shape. Tamil needs smaller starting sizes because
     its glyphs are visually larger than Latin at the same point size.
+
+    For Tamil we set the typeface on BOTH the Latin slot AND the complex-
+    script slot (see _set_run_typeface for the why).
     """
     font_name = pptx_font_for_language(language)
     is_tamil = font_name is not None
@@ -75,22 +101,26 @@ def _polish_text_frames(prs: Presentation, language: str | None) -> None:
                 continue
             tf = shape.text_frame
             tf.word_wrap = True
-            try:
-                tf.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
-            except (AttributeError, ValueError):
-                pass  # some shape types (e.g., autoshapes) don't support autosize
+            # Tamil glyphs are notoriously hard for PowerPoint's auto-fit to
+            # measure correctly — its metric for the complex-script font often
+            # over- or under-shrinks. Skip auto-fit for Tamil; we control sizes
+            # explicitly via the Pt() values below.
+            if not is_tamil:
+                try:
+                    tf.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+                except (AttributeError, ValueError):
+                    pass
 
             is_title = shape is title_shape
             for para in tf.paragraphs:
                 for run in para.runs:
                     if is_tamil:
-                        run.font.name = font_name
+                        _set_run_typeface(run, font_name)
                         if run.font.size is None:
-                            run.font.size = Pt(28) if is_title else Pt(20)
+                            run.font.size = Pt(24) if is_title else Pt(16)
                         else:
-                            # Shrink explicit sizes for Tamil headroom
                             current_pt = run.font.size.pt
-                            run.font.size = Pt(max(10, int(current_pt * 0.85)))
+                            run.font.size = Pt(max(10, int(current_pt * 0.75)))
 
 
 def _rgb(palette_color: tuple[int, int, int]) -> RGBColor:
